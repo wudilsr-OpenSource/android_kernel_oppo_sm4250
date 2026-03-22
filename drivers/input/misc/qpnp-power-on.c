@@ -25,6 +25,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
+#include <linux/timekeeping.h>
 
 #ifdef OPLUS_FEATURE_THEIA
 #include <soc/oplus/system/oplus_bscheck.h>
@@ -1006,7 +1007,7 @@ static int qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 
 	/* DEBUG: Force panic after 120s boot timeout for pstore log capture */
 	if (cfg->pon_type == PON_KPDPWR && key_status) {
-		u64 boot_ns = ktime_get_boottime_ns();
+		u64 boot_ns = ktime_get_boot_ns();
 		if (boot_ns > 120ULL * NSEC_PER_SEC) {
 			pr_emerg("Boot timeout: triggering panic for pstore log\n");
 			panic_trigger_for_debug();
