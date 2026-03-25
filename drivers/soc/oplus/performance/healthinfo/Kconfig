@@ -4,5 +4,4 @@
 source "drivers/soc/oplus/performance/healthinfo/mm/Kconfig"
 source "drivers/soc/oplus/performance/healthinfo/blk/Kconfig"
 source "drivers/soc/oplus/performance/healthinfo/main/Kconfig"
-source "drivers/soc/oplus/performance/healthinfo/fs/Kconfig"
 source "drivers/soc/oplus/performance/healthinfo/ion/Kconfig"

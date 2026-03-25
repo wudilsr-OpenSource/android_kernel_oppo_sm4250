@@ -15,6 +15,9 @@ source "drivers/soc/oplus/thermal/Kconfig"
 
 # OPLUS Performance Optimization
 source "drivers/soc/oplus/performance/Kconfig"
+source "drivers/soc/oplus/system/Kconfig"
+source "drivers/soc/oplus/oplus_wakelock/Kconfig"
+source "drivers/soc/oplus/sensor/Kconfig"
 
 # OPLUS Security
 source "drivers/soc/oplus/secureguard/Kconfig"

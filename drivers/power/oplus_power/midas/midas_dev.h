@@ -9,7 +9,6 @@
 
 #include <linux/cdev.h>
 #include <linux/device.h>
-#include <linux/oplus_midas.h>
 
 #define STATE_MAX    60
 #define CNT_MAX      1024

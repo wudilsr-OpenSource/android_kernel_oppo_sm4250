@@ -3,6 +3,7 @@
 
 config OPLUS_KEVENT_UPLOAD
 	bool "OPLUS Kevent Upload Support"
+	depends on OPLUS_SECURE_GUARD
 	default y
 	help
-	  OPLUS kernel event upload feature for security monitoring
+	  Enable OPLUS kernel event upload support for secure guard.

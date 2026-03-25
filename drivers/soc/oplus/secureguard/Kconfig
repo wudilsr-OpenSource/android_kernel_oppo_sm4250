@@ -3,7 +3,17 @@
 
 menu "OPLUS Security"
 
+config OPLUS_SECURE_GUARD
+	bool "OPLUS Secure Guard Support"
+	default y
+	help
+	  Enable OPLUS kernel security monitoring and root guard support.
+
+if OPLUS_SECURE_GUARD
+
 source "drivers/soc/oplus/secureguard/keventupload/Kconfig"
 source "drivers/soc/oplus/secureguard/rootguard/Kconfig"
+
+endif
 
 endmenu

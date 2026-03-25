@@ -313,9 +313,9 @@ static void p922x_clear_irq(struct oplus_p922x_ic *chip, char mark0, char mark1)
 	p922x_write_reg_multi_byte(chip, 0x004E, write_data, 2);
 }
 
-static void p922x_set_FOD_parameter(struct oplus_p922x_ic *chip, char parameter)
+static void p922x_set_fod_parameter(struct oplus_p922x_ic *chip, char parameter)
 {
-	if (parameter == chip->p922x_chg_status.FOD_parameter) {
+	if (parameter == chip->p922x_chg_status.fod_parameter) {
 		return;
 	}
 
@@ -334,7 +334,7 @@ static void p922x_set_FOD_parameter(struct oplus_p922x_ic *chip, char parameter)
 		p922x_config_interface(chip, 0x0072, 0x98, 0xFF);
 		p922x_config_interface(chip, 0x0073, 0xE2, 0xFF);
 
-		chip->p922x_chg_status.FOD_parameter = parameter;
+		chip->p922x_chg_status.fod_parameter = parameter;
 	} else if (parameter == 12) {
 		chg_err("<~WPC~>set FOD parameter BPP12\n");
 		p922x_config_interface(chip, 0x0068, 0xC8, 0xFF);
@@ -350,7 +350,7 @@ static void p922x_set_FOD_parameter(struct oplus_p922x_ic *chip, char parameter)
 		p922x_config_interface(chip, 0x0072, 0x93, 0xFF);
 		p922x_config_interface(chip, 0x0073, 0x17, 0xFF);
 
-		chip->p922x_chg_status.FOD_parameter = parameter;
+		chip->p922x_chg_status.fod_parameter = parameter;
 	} else if (parameter == 10) {
 		chg_err("<~WPC~>set FOD parameter BPP10\n");
 		p922x_config_interface(chip, 0x0068, 0xBE, 0xFF);
@@ -366,7 +366,7 @@ static void p922x_set_FOD_parameter(struct oplus_p922x_ic *chip, char parameter)
 		p922x_config_interface(chip, 0x0072, 0x96, 0xFF);
 		p922x_config_interface(chip, 0x0073, 0x3F, 0xFF);
 
-		chip->p922x_chg_status.FOD_parameter = parameter;	
+		chip->p922x_chg_status.fod_parameter = parameter;
 	} else if (parameter == 1) {
 		chg_err("<~WPC~>set FOD parameter BPP1\n");
 		p922x_config_interface(chip, 0x0068, 0x85, 0xFF);
@@ -382,7 +382,7 @@ static void p922x_set_FOD_parameter(struct oplus_p922x_ic *chip, char parameter)
 		p922x_config_interface(chip, 0x0072, 0xA4, 0xFF);
 		p922x_config_interface(chip, 0x0073, 0x17, 0xFF);
 
-		chip->p922x_chg_status.FOD_parameter = parameter;
+		chip->p922x_chg_status.fod_parameter = parameter;
 	} else if (parameter == 0) {
 		chg_err("<~WPC~>Disable FOD\n");
 		p922x_config_interface(chip, 0x0068, 0xFF, 0xFF);
@@ -398,7 +398,7 @@ static void p922x_set_FOD_parameter(struct oplus_p922x_ic *chip, char parameter)
 		p922x_config_interface(chip, 0x0072, 0xFF, 0xFF);
 		p922x_config_interface(chip, 0x0073, 0x7F, 0xFF);
 
-		chip->p922x_chg_status.FOD_parameter = parameter;
+		chip->p922x_chg_status.fod_parameter = parameter;
 	}
 }
 
@@ -678,7 +678,7 @@ static void p922x_reset_variables(struct oplus_p922x_ic *chip)
 	chip->p922x_chg_status.iout_debug_mode = false;
 #endif
 
-	chip->p922x_chg_status.FOD_parameter = 0;
+	chip->p922x_chg_status.fod_parameter = 0;
 }
 
 static void p922x_init(struct oplus_p922x_ic *chip)
@@ -1844,7 +1844,7 @@ static void p922x_ready_to_switch_to_charger(struct oplus_p922x_ic *chip, bool r
 	chip->p922x_chg_status.need_doublecheck_to_cp = true;
 	chip->p922x_chg_status.doublecheck_ok = false;
 
-	p922x_set_FOD_parameter(chip, 0);
+	p922x_set_fod_parameter(chip, 0);
 	chip->p922x_chg_status.charge_status = WPC_CHG_STATUS_DECREASE_IOUT_TO_200MA;
 }
 
@@ -1854,7 +1854,7 @@ static void p922x_ready_to_switch_to_chargepump(struct oplus_p922x_ic *chip)
 	if (chip->p922x_chg_status.need_doublecheck_to_cp == true)
 		chip->p922x_chg_status.doublecheck_ok = false;
 
-	p922x_set_FOD_parameter(chip, 0);
+	p922x_set_fod_parameter(chip, 0);
 	chip->p922x_chg_status.charge_status = WPC_CHG_STATUS_READY_FOR_FASTCHG;
 }
 
@@ -2930,7 +2930,7 @@ static int p922x_charge_status_process(struct oplus_p922x_ic *chip)
 				break;
 			} 
 
-			p922x_set_FOD_parameter(chip, 12);
+			p922x_set_fod_parameter(chip, 12);
 
 			mp2650_set_vindpm_vol(8700);
 			chip->p922x_chg_status.idt_adc_test_result = false;
@@ -3097,7 +3097,7 @@ static int p922x_charge_status_process(struct oplus_p922x_ic *chip)
 
 		p922x_set_rx_charge_current(chip, 300);
 		
-		p922x_set_FOD_parameter(chip, 17);
+		p922x_set_fod_parameter(chip, 17);
 
 		cep_zero_cnt = 0;
 		cep_nonzero_cnt = 0;
@@ -3356,9 +3356,9 @@ static int p922x_charge_status_process(struct oplus_p922x_ic *chip)
 
 	case WPC_CHG_STATUS_FAST_CHARGING_FROM_CHARGER:
 		if (chip->p922x_chg_status.vout < 12000) {
-			p922x_set_FOD_parameter(chip, 10);
+			p922x_set_fod_parameter(chip, 10);
 		} else if(chip->p922x_chg_status.vout > 12100){
-			p922x_set_FOD_parameter(chip, 12);
+			p922x_set_fod_parameter(chip, 12);
 		}
 
 		if (chip->p922x_chg_status.adapter_type == ADAPTER_TYPE_VOOC) {
@@ -3729,7 +3729,7 @@ static void p922x_commu_data_process(struct oplus_p922x_ic *chip)
 				switch (tx_command) {
 				case P9237_RESPONE_ADAPTER_TYPE:
 					if ((tx_command == tx_command_r) && (tx_data == tx_data_r)) {
-						p922x_set_FOD_parameter(chip, 1);
+						p922x_set_fod_parameter(chip, 1);
 						
 						chip->p922x_chg_status.adapter_type = (tx_data & 0x07);
 						chip->p922x_chg_status.dock_version = (tx_data & 0xF8) >> 3;

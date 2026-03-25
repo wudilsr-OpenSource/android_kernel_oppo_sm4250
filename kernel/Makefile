@@ -138,9 +138,6 @@ obj-$(CONFIG_RSEQ) += rseq.o
 obj-y += sched_assist/
 #endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
-#ifdef OPLUS_FEATURE_SCHED_ASSIST
-obj-y += special_opt/
-#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 $(obj)/configs.o: $(obj)/config_data.h
 

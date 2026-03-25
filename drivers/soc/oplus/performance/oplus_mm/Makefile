@@ -2,4 +2,3 @@
 # OPLUS MM Drivers
 
 obj-y += zram_opt/
-obj-y += process_reclaim/

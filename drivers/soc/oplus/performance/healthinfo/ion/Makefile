@@ -1,4 +1,2 @@
-#ifdef OPLUS_FEATURE_HEALTHINFO
-obj-y  +=  oppo_ion.o
-#endif /* OPLUS_FEATURE_HEALTHINFO */
+obj-$(CONFIG_OPLUS_FEATURE_ION_HEALTHINFO) += oppo_ion.o
 

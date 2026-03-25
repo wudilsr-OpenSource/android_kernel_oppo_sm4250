@@ -2,26 +2,22 @@
 # OPLUS Performance Optimization Drivers
 
 obj-y += cpufreq_bouncing/
-obj-y += foreground_io_opt/
-obj-y += input_boost/
+obj-$(CONFIG_OPLUS_FG_IO_OPT) += foreground_io_opt/
+obj-$(CONFIG_OPLUS_FEATURE_INPUT_BOOST) += input_boost/
 obj-y += iomonitor/
 obj-y += lowmem_dbg/
-obj-y += memory_isolate/
-obj-y += multi_kswapd/
-obj-y += sched_assist/
+obj-$(CONFIG_OPLUS_MEMORY_ISOLATE) += memory_isolate/
+obj-$(CONFIG_OPLUS_MULTI_KSWAPD) += multi_kswapd/
 obj-y += special_opt/
-obj-y += task_cpustats/
-obj-y += tpd/
-obj-y += tpp/
-obj-y += uifirst/
-obj-y += uxio_first/
+obj-$(CONFIG_OPLUS_FEATURE_TPD) += tpd/
+obj-$(CONFIG_OPLUS_FEATURE_TPP) += tpp/
+obj-$(CONFIG_OPLUS_FEATURE_UIFIRST) += uifirst/
 obj-y += zwb_handle/
 obj-y += healthinfo/
 obj-y += im/
 obj-y += memleak_detect/
 obj-y += oplus_mm/
 obj-y += oplus_nandswap/
-obj-y += process_reclaim/
 
 # Optional modules
 obj-$(CONFIG_OPLUS_GLOOM) += gloom/

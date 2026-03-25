@@ -4,6 +4,6 @@
 config OPLUS_FG_IO_OPT
        bool "Enable foreground io optimization"
        depends on FG_TASK_UID
-       default y
+       default n
        help
          foreground io optimization

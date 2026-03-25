@@ -1,8 +1,30 @@
 # SPDX-License-Identifier: GPL-2.0
 # OPLUS Root Guard
 
-config OPLUS_ROOT_GUARD
-	bool "OPLUS Root Guard Support"
+config OPLUS_ROOT_CHECK
+	bool "OPLUS Root Check Support"
+	depends on OPLUS_SECURE_GUARD
 	default y
 	help
-	  OPLUS root protection and security monitoring feature
+	  Enable OPLUS root detection hooks.
+
+config OPLUS_MOUNT_BLOCK
+	bool "OPLUS Mount Block Support"
+	depends on OPLUS_SECURE_GUARD
+	default y
+	help
+	  Enable OPLUS mount restriction hooks.
+
+config OPLUS_EXECVE_BLOCK
+	bool "OPLUS Execve Block Support"
+	depends on OPLUS_SECURE_GUARD
+	default y
+	help
+	  Enable OPLUS execve blocking hooks.
+
+config OPLUS_EXECVE_REPORT
+	bool "OPLUS Execve Report Support"
+	depends on OPLUS_SECURE_GUARD
+	default y
+	help
+	  Enable OPLUS execve reporting hooks.

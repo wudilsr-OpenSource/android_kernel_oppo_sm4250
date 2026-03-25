@@ -82,7 +82,7 @@ static void query_pid_name(struct task_struct *p, char *pid_name)
 	if (!(p->flags & PF_WQ_WORKER)) {
 		strncpy(pid_name, p->comm, TASK_COMM_LEN);
 	} else {
-		get_worker_info(p, buf);
+		wq_worker_comm(buf, sizeof(buf), p);
 		if (buf[0]) {
 			strncpy(pid_name, buf, TASK_COMM_LEN - 1);
 			pid_name[TASK_COMM_LEN - 1] = '\0';

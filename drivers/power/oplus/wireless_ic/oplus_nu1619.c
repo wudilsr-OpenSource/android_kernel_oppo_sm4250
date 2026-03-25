@@ -34,7 +34,7 @@
 #include <uapi/linux/qg.h>
 #endif
 #include <soc/oppo/device_info.h>
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #include "../oplus_vooc.h"
 #include "../oplus_gauge.h"

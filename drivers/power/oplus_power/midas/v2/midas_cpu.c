@@ -56,7 +56,7 @@ static void query_pid_name(struct task_struct *p, char *name)
 	if (!(p->flags & PF_WQ_WORKER)) {
 		strncpy(name, p->comm, TASK_COMM_LEN);
 	} else {
-		get_worker_info(p, buf);
+		wq_worker_comm(buf, sizeof(buf), p);
 		if (buf[0]) {
 			strncpy(name, buf, TASK_COMM_LEN - 1);
 			name[TASK_COMM_LEN - 1] = '\0';

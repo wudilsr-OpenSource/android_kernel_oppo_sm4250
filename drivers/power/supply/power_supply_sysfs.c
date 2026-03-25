@@ -544,6 +544,13 @@ static struct device_attribute power_supply_attrs[] = {
 /* Yichun.Chen  PSW.BSP.CHG  2018-06-04  save soc */
 	POWER_SUPPLY_ATTR(charger_status),
 #endif
+	POWER_SUPPLY_ATTR(tx_voltage_now),
+	POWER_SUPPLY_ATTR(tx_current_now),
+	POWER_SUPPLY_ATTR(cp_voltage_now),
+	POWER_SUPPLY_ATTR(cp_current_now),
+	POWER_SUPPLY_ATTR(wireless_mode),
+	POWER_SUPPLY_ATTR(wireless_type),
+	POWER_SUPPLY_ATTR(cep_info),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 #ifdef OPLUS_FEATURE_CHG_BASIC

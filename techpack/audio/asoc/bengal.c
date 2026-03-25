@@ -48,7 +48,7 @@
 #endif
 
 #ifdef OPLUS_ARCH_EXTENDS
-#include "../../../../oplus/kernel_4.19/audio/codecs/sia81xx/sia81xx_aux_dev_if.h"
+#include "../../../sound/soc/codecs/sia81xx/sia81xx_aux_dev_if.h"
 #endif /* OPLUS_ARCH_EXTENDS */
 
 #define DRV_NAME "bengal-asoc-snd"

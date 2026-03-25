@@ -10,7 +10,9 @@ ifeq ($(CONFIG_OPLUS_CHARGER_MTK6889),y)
 subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/include
 endif
 ifneq ($(CONFIG_OPLUS_CHARGER_MTK),y)
-#obj-y      += wireless_ic/
+ifneq ($(CONFIG_OPLUS_SM6115R_CHARGER),y)
+obj-y      += wireless_ic/
+endif
 endif
 obj-y      += charger_ic/
 obj-y      += gauge_ic/
