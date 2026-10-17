@@ -1,0 +1,4 @@
+# OPPO audio codec drivers, imported from vendor/oplus/kernel_4.19/audio.
+# Only the codecs enabled by config/bengalautoconf.h are hooked into the
+# in-tree build; the remaining codecs are DLKM-only.
+obj-y += codecs/
