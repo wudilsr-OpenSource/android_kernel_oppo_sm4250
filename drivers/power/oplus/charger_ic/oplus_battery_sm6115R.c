@@ -13581,7 +13581,7 @@ ntcvolt_get_done:
 	return batt_btb_tmp;
 }
 
-void oplus_set_typec_sinkonly()
+void oplus_set_typec_sinkonly(void)
 {
 	int rc;
 	struct smb_charger *chg = NULL;
@@ -15297,7 +15297,7 @@ static int oplus_chg_get_charger_subtype(void)
 
 #endif /* OPLUS_FEATURE_CHG_BASIC */
 /*#ifdef OPLUS_FEATURE_CHG_BASIC*/
-static int oplus_set_qc_config()
+static int oplus_set_qc_config(void)
 {
 	struct oplus_chg_chip *chip = g_oplus_chip;
 
