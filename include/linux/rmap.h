@@ -23,6 +23,8 @@ extern unsigned long reclaim_pages_from_list(struct list_head *page_list,
 					struct vm_area_struct *vma);
 #endif
 
+extern unsigned long reclaim_pages(struct list_head *page_list);
+
 /*
  * The anon_vma heads a list of private "related" vmas, to scan if
  * an anonymous page pointing to this anon_vma needs to be unmapped:
@@ -49,7 +51,13 @@ struct anon_vma {
 	 */
 	atomic_t refcount;
 
-	unsigned degree;		/* ANDROID: KABI preservation, DO NOT USE! */
+	/*
+	 * Count of child anon_vmas and VMAs which points to this anon_vma.
+	 *
+	 * This counter is used for making decision about reusing anon_vma
+	 * instead of forking new one. See comments in function anon_vma_clone.
+	 */
+	unsigned degree;
 
 	struct anon_vma *parent;	/* Parent of this anon_vma */
 
@@ -64,27 +72,6 @@ struct anon_vma {
 
 	/* Interval tree of private "related" vmas */
 	struct rb_root_cached rb_root;
-
-	/* key to tell if a valid anon_vma type */
-	unsigned long private;
-
-	/*
-	 * ANDROID: KABI preservation, it's safe to put these at the end of this structure as it's
-	 * only passed by a pointer everywhere, the size and internal structures are local to the
-	 * core kernel.
-	 */
-#ifndef __GENKSYMS__
-	/*
-	 * Count of child anon_vmas. Equals to the count of all anon_vmas that
-	 * have ->parent pointing to this one, including itself.
-	 *
-	 * This counter is used for making decision about reusing anon_vma
-	 * instead of forking new one. See comments in function anon_vma_clone.
-	 */
-	unsigned long num_children;
-	/* Count of VMAs whose ->anon_vma pointer points to this object. */
-	unsigned long num_active_vmas;
-#endif
 };
 
 /*

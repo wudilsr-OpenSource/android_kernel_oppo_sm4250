@@ -59,7 +59,7 @@ struct sugov_policy {
 
 	bool			limits_changed;
 	bool			need_freq_update;
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	unsigned int flags;
 #endif
 };
@@ -127,7 +127,7 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 	 * limit once frequency change direction is decided, according
 	 * to the separate rate limits.
 	 */
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	if (sg_policy->flags & SCHED_CPUFREQ_BOOST)
 		return true;
 #endif
@@ -160,7 +160,7 @@ static bool sugov_up_down_rate_limit(struct sugov_policy *sg_policy, u64 time,
 
 	delta_ns = time - sg_policy->last_freq_update_time;
 
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	if (sg_policy->flags & SCHED_CPUFREQ_BOOST)
 		return false;
 #endif
@@ -680,7 +680,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	ignore_dl_rate_limit(sg_cpu, sg_policy);
 
 	if (!sugov_should_update_freq(sg_policy, time))
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	sg_policy->flags = flags;
 #endif
 		return;
@@ -827,7 +827,7 @@ sugov_update_shared(struct update_util_data *hook, u64 time, unsigned int flags)
 				sg_cpu->walt_load.pl,
 				sg_cpu->walt_load.rtgb_active, flags);
 
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	sg_policy->flags = flags;
 #endif
 	if (sugov_should_update_freq(sg_policy, time) &&
@@ -1351,7 +1351,7 @@ static int sugov_start(struct cpufreq_policy *policy)
 	sg_policy->limits_changed		= false;
 	sg_policy->need_freq_update		= false;
 	sg_policy->cached_raw_freq		= 0;
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	sg_policy->flags	= 0;
 #endif
 	sg_policy->prev_cached_raw_freq		= 0;

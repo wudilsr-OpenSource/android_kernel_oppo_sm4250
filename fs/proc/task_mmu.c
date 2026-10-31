@@ -1722,7 +1722,8 @@ static void proc_reclaim_notify(unsigned long pid, void *rp)
 	blocking_notifier_call_chain(&proc_reclaim_notifier, pid, rp);
 }
 
-int reclaim_address_space(struct address_space *mapping,struct reclaim_param *rp)
+int reclaim_address_space(struct address_space *mapping,
+			struct reclaim_param *rp, struct vm_area_struct *vma)
 {
 	struct radix_tree_iter iter;
 	void __rcu **slot;
@@ -1764,9 +1765,9 @@ int reclaim_address_space(struct address_space *mapping,struct reclaim_param *rp
 	}
 	rcu_read_unlock();
 #if defined(OPLUS_FEATURE_PROCESS_RECLAIM) && defined(CONFIG_PROCESS_RECLAIM_ENHANCE)
-	reclaimed = reclaim_pages_from_list(&page_list, NULL, NULL);
+	reclaimed = reclaim_pages_from_list(&page_list, vma, NULL);
 #else
-	reclaimed = reclaim_pages_from_list(&page_list, NULL);
+	reclaimed = reclaim_pages_from_list(&page_list, vma);
 #endif
 	rp->nr_reclaimed += reclaimed;
 
@@ -1866,7 +1867,7 @@ struct reclaim_param reclaim_task_nomap(struct task_struct *task,
 		goto out;
 	down_read(&mm->mmap_sem);
 
-    proc_reclaim_notify((unsigned long)task_pid(task), (void *)&rp);
+	proc_reclaim_notify(task_tgid_nr(task), (void *)&rp);
 
 	up_read(&mm->mmap_sem);
 	mmput(mm);

@@ -36,7 +36,7 @@ void rq_qos_cleanup(struct request_queue *q, struct bio *bio)
 			rqos->ops->cleanup(rqos, bio);
 	}
 }
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 void rq_qos_done(struct request_queue *q, struct request *rq, bool fgux)
 {
 	struct rq_qos *rqos;

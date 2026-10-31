@@ -351,7 +351,7 @@ static void nu1619_clear_irq(struct oplus_nu1619_ic *chip, char mark0, char mark
 
 static void nu1619_set_FOD_parameter(struct oplus_nu1619_ic *chip, char parameter)
 {
-	if (parameter == chip->nu1619_chg_status.FOD_parameter) {
+	if (parameter == chip->nu1619_chg_status.fod_parameter) {
 		return;
 	}
 
@@ -371,7 +371,7 @@ static void nu1619_set_FOD_parameter(struct oplus_nu1619_ic *chip, char paramete
 		nu1619_config_interface(chip, 0x0072, 0x98, 0xFF);
 		nu1619_config_interface(chip, 0x0073, 0xE2, 0xFF);
 
-		chip->nu1619_chg_status.FOD_parameter = parameter;
+		chip->nu1619_chg_status.fod_parameter = parameter;
 	} else if (parameter == 12) {
 		chg_err("<~WPC~>set FOD parameter BPP12\n");
 		nu1619_config_interface(chip, 0x0068, 0xC8, 0xFF);
@@ -387,7 +387,7 @@ static void nu1619_set_FOD_parameter(struct oplus_nu1619_ic *chip, char paramete
 		nu1619_config_interface(chip, 0x0072, 0x93, 0xFF);
 		nu1619_config_interface(chip, 0x0073, 0x17, 0xFF);
 
-		chip->nu1619_chg_status.FOD_parameter = parameter;
+		chip->nu1619_chg_status.fod_parameter = parameter;
 	} else if (parameter == 10) {
 		chg_err("<~WPC~>set FOD parameter BPP10\n");
 		nu1619_config_interface(chip, 0x0068, 0xBE, 0xFF);
@@ -403,7 +403,7 @@ static void nu1619_set_FOD_parameter(struct oplus_nu1619_ic *chip, char paramete
 		nu1619_config_interface(chip, 0x0072, 0x96, 0xFF);
 		nu1619_config_interface(chip, 0x0073, 0x3F, 0xFF);
 
-		chip->nu1619_chg_status.FOD_parameter = parameter;
+		chip->nu1619_chg_status.fod_parameter = parameter;
 	} else if (parameter == 1) {
 		chg_err("<~WPC~>set FOD parameter BPP1\n");
 		nu1619_config_interface(chip, 0x0068, 0x85, 0xFF);
@@ -419,7 +419,7 @@ static void nu1619_set_FOD_parameter(struct oplus_nu1619_ic *chip, char paramete
 		nu1619_config_interface(chip, 0x0072, 0xA4, 0xFF);
 		nu1619_config_interface(chip, 0x0073, 0x17, 0xFF);
 
-		chip->nu1619_chg_status.FOD_parameter = parameter;
+		chip->nu1619_chg_status.fod_parameter = parameter;
 	} else if (parameter == 0) {
 		chg_err("<~WPC~>Disable FOD\n");
 		nu1619_config_interface(chip, 0x0068, 0xFF, 0xFF);
@@ -435,7 +435,7 @@ static void nu1619_set_FOD_parameter(struct oplus_nu1619_ic *chip, char paramete
 		nu1619_config_interface(chip, 0x0072, 0xFF, 0xFF);
 		nu1619_config_interface(chip, 0x0073, 0x7F, 0xFF);
 
-		chip->nu1619_chg_status.FOD_parameter = parameter;
+		chip->nu1619_chg_status.fod_parameter = parameter;
 	}
 }
 
@@ -680,7 +680,7 @@ static void nu1619_reset_variables(struct oplus_nu1619_ic *chip)
 	chip->nu1619_chg_status.dock_version = 0;
 	chip->nu1619_chg_status.charge_voltage = 0;
 	chip->nu1619_chg_status.charge_current = 0;
-	chip->nu1619_chg_status.CEP_ready = false;
+	chip->nu1619_chg_status.cep_ready = false;
 	chip->nu1619_chg_status.vrect = 0;
 	chip->nu1619_chg_status.vout = 0;
 	chip->nu1619_chg_status.iout = 0;
@@ -700,14 +700,14 @@ static void nu1619_reset_variables(struct oplus_nu1619_ic *chip)
 	chip->nu1619_chg_status.need_doublecheck_to_cp = false;
 	chip->nu1619_chg_status.doublecheck_ok = true;
 	chip->nu1619_chg_status.epp_current_limit = 0;
-	chip->nu1619_chg_status.BPP_current_limit = 0;
+	chip->nu1619_chg_status.bpp_current_limit = 0;
 	chip->nu1619_chg_status.wpc_chg_param.pre_input_ma = 0;
 #ifdef DEBUG_FASTCHG_BY_ADB
 	chip->nu1619_chg_status.vout_debug_mode = false;
 	chip->nu1619_chg_status.iout_debug_mode = false;
 #endif
 
-	chip->nu1619_chg_status.FOD_parameter = 0;
+	chip->nu1619_chg_status.fod_parameter = 0;
 	chip->nu1619_chg_status.rx_power = 0;
 	chip->nu1619_chg_status.tx_power = 0;
 }
@@ -762,10 +762,10 @@ static void nu1619_charger_init(struct oplus_nu1619_ic *chip)
 
 		mp2650_set_vindpm_vol(4800);
 
-		chip->nu1619_chg_status.BPP_current_limit = 300;
-		mp2650_input_current_limit_without_aicl(chip->nu1619_chg_status.BPP_current_limit);
-		nu1619_set_rx_charge_current(chip, chip->nu1619_chg_status.BPP_current_limit);
-		chip->nu1619_chg_status.BPP_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
+		chip->nu1619_chg_status.bpp_current_limit = 300;
+		mp2650_input_current_limit_without_aicl(chip->nu1619_chg_status.bpp_current_limit);
+		nu1619_set_rx_charge_current(chip, chip->nu1619_chg_status.bpp_current_limit);
+		chip->nu1619_chg_status.bpp_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
 	}
 
 	mp2650_set_termchg_current(WPC_TERMINATION_CURRENT);
@@ -1826,25 +1826,25 @@ static int nu1619_get_tx_iout(struct oplus_nu1619_ic * chip)
 
 static void nu1619_begin_CEP_detect(struct oplus_nu1619_ic * chip)
 {
-	chip->nu1619_chg_status.CEP_ready = false;
+	chip->nu1619_chg_status.cep_ready = false;
 	schedule_delayed_work(&chip->nu1619_CEP_work, P922X_CEP_INTERVAL);
 }
 
 static void nu1619_reset_CEP_flag(struct oplus_nu1619_ic * chip)
 {
-	chip->nu1619_chg_status.CEP_ready = false;
+	chip->nu1619_chg_status.cep_ready = false;
 }
 
 int nu1619_get_CEP_flag(struct oplus_nu1619_ic * chip)
 {
-	if (chip->nu1619_chg_status.CEP_ready == false) {
+	if (chip->nu1619_chg_status.cep_ready == false) {
 		chg_err("<~WPC~> CEP value isn't ready!\n");
 		return -1;
 	}
 
-	if ((chip->nu1619_chg_status.CEP_value == 0) || (chip->nu1619_chg_status.CEP_value == 1)
-		|| (chip->nu1619_chg_status.CEP_value == 2) || (chip->nu1619_chg_status.CEP_value == 0xFF)
-		|| (chip->nu1619_chg_status.CEP_value == 0xFE)) {
+	if ((chip->nu1619_chg_status.cep_value == 0) || (chip->nu1619_chg_status.cep_value == 1)
+		|| (chip->nu1619_chg_status.cep_value == 2) || (chip->nu1619_chg_status.cep_value == 0xFF)
+		|| (chip->nu1619_chg_status.cep_value == 0xFE)) {
 		return 0;
 	} else {
 		return 1;
@@ -1853,8 +1853,8 @@ int nu1619_get_CEP_flag(struct oplus_nu1619_ic * chip)
 
 static void nu1619_print_CEP_flag(struct oplus_nu1619_ic * chip)
 {
-	if ((nu1619_chip->nu1619_chg_status.charge_online) && (chip->nu1619_chg_status.CEP_ready)) {
-		chg_err("<~WPC~> CEP value = %d\n", chip->nu1619_chg_status.CEP_value);
+	if ((nu1619_chip->nu1619_chg_status.charge_online) && (chip->nu1619_chg_status.cep_ready)) {
+		chg_err("<~WPC~> CEP value = %d\n", chip->nu1619_chg_status.cep_value);
 	}
 }
 
@@ -1877,10 +1877,10 @@ static int nu1619_detect_CEP(struct oplus_nu1619_ic * chip)
 	if (val_buf[0] == (0x95 ^ 0x80)) {
 		temp = val_buf[1];
 	}
-	chip->nu1619_chg_status.CEP_ready = true;
-	chip->nu1619_chg_status.CEP_value = temp;
+	chip->nu1619_chg_status.cep_ready = true;
+	chip->nu1619_chg_status.cep_value = temp;
 	if (chip->nu1619_chg_status.skewing_info == true) {
-		cep_info = to_cep_info(chip->nu1619_chg_status.CEP_value);
+		cep_info = to_cep_info(chip->nu1619_chg_status.cep_value);
 		if (chip->nu1619_chg_status.cep_info < cep_info) {
 			chip->nu1619_chg_status.cep_info = cep_info;
 		}
@@ -2647,7 +2647,7 @@ int nu1619_charge_set_max_current_by_tbatt(struct oplus_nu1619_ic *chip)
 	case BATTERY_STATUS__NORMAL:
 		chip->nu1619_chg_status.fastchg_current_limit = chip->nu1619_chg_status.wpc_chg_param.svooc_65w_iout_ma;
 		/*chip->nu1619_chg_status.epp_current_limit = chip->nu1619_chg_status.wpc_chg_param.epp_input_ma;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_normal_fastchg_ma;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_normal_fastchg_ma;
 		switch (chip->nu1619_chg_status.adapter_type) {
 		case ADAPTER_TYPE_VOOC:
 			chip->nu1619_chg_status.fastchg_current_limit = chip->nu1619_chg_status.wpc_chg_param.vooc_temp_normal_fastchg_ma;
@@ -2675,12 +2675,12 @@ int nu1619_charge_set_max_current_by_tbatt(struct oplus_nu1619_ic *chip)
 		}
 		chip->nu1619_chg_status.fastchg_current_limit = 0;
 		/*chip->nu1619_chg_status.epp_current_limit = chip->nu1619_chg_status.wpc_chg_param.epp_input_ma;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_cold_fastchg_ma;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_cold_fastchg_ma;
 		charging_current = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_cold_fastchg_ma;
 		break;
 	case BATTERY_STATUS__LITTLE_COLD_TEMP:
 		/*chip->nu1619_chg_status.epp_current_limit = chip->nu1619_chg_status.wpc_chg_param.epp_input_ma;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_little_cold_fastchg_ma;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_little_cold_fastchg_ma;
 		switch (chip->nu1619_chg_status.adapter_type) {
 		case ADAPTER_TYPE_VOOC:
 			chip->nu1619_chg_status.fastchg_current_limit = chip->nu1619_chg_status.wpc_chg_param.vooc_temp_little_cold_fastchg_ma;
@@ -2701,7 +2701,7 @@ int nu1619_charge_set_max_current_by_tbatt(struct oplus_nu1619_ic *chip)
 		break;
 	case BATTERY_STATUS__COOL_TEMP:
 		/*chip->nu1619_chg_status.epp_current_limit = chip->nu1619_chg_status.wpc_chg_param.epp_input_ma;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_cool_fastchg_ma;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_cool_fastchg_ma;
 		switch (chip->nu1619_chg_status.adapter_type) {
 		case ADAPTER_TYPE_VOOC:
 			chip->nu1619_chg_status.fastchg_current_limit = chip->nu1619_chg_status.wpc_chg_param.vooc_temp_cool_fastchg_ma;
@@ -2722,7 +2722,7 @@ int nu1619_charge_set_max_current_by_tbatt(struct oplus_nu1619_ic *chip)
 		break;
 	case BATTERY_STATUS__LITTLE_COOL_TEMP:
 		/*chip->nu1619_chg_status.epp_current_limit = chip->nu1619_chg_status.wpc_chg_param.epp_input_ma;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_little_cool_fastchg_ma;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_little_cool_fastchg_ma;
 		switch (chip->nu1619_chg_status.adapter_type) {
 		case ADAPTER_TYPE_VOOC:
 			chip->nu1619_chg_status.fastchg_current_limit = chip->nu1619_chg_status.wpc_chg_param.vooc_temp_little_cool_fastchg_ma;
@@ -2752,7 +2752,7 @@ int nu1619_charge_set_max_current_by_tbatt(struct oplus_nu1619_ic *chip)
 		}
 		chip->nu1619_chg_status.fastchg_current_limit = 0;
 		/*chip->nu1619_chg_status.epp_current_limit = 0;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_warm_fastchg_ma;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_warm_fastchg_ma;
 		charging_current = chip->nu1619_chg_status.wpc_chg_param.bpp_temp_warm_fastchg_ma;
 		break;
 	case BATTERY_STATUS__REMOVED:
@@ -2765,7 +2765,7 @@ int nu1619_charge_set_max_current_by_tbatt(struct oplus_nu1619_ic *chip)
 		}
 		chip->nu1619_chg_status.fastchg_current_limit = 0;
 		/*chip->nu1619_chg_status.epp_current_limit = 0;*/
-		chip->nu1619_chg_status.BPP_fastchg_current_ma = 0;
+		chip->nu1619_chg_status.bpp_fastchg_current_ma = 0;
 		charging_current = 0;
 		break;
 	default:
@@ -2831,27 +2831,27 @@ static int oplus_wpc_set_input_current(struct oplus_nu1619_ic *chip)
 		current_limit = chip->nu1619_chg_status.epp_current_limit;
 		break;
 	default:
-		if (chip->nu1619_chg_status.BPP_current_step_cnt > 0) {
-			chip->nu1619_chg_status.BPP_current_step_cnt--;
-			if (chip->nu1619_chg_status.BPP_current_step_cnt == 0) {
-				if (chip->nu1619_chg_status.BPP_current_limit < 500) {
+		if (chip->nu1619_chg_status.bpp_current_step_cnt > 0) {
+			chip->nu1619_chg_status.bpp_current_step_cnt--;
+			if (chip->nu1619_chg_status.bpp_current_step_cnt == 0) {
+				if (chip->nu1619_chg_status.bpp_current_limit < 500) {
 					chg_err("<~WPC~> set BPP current limit 500ma\n");
-					chip->nu1619_chg_status.BPP_current_limit = 500;
+					chip->nu1619_chg_status.bpp_current_limit = 500;
 					mp2650_set_vindpm_vol(4900);
-					chip->nu1619_chg_status.BPP_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
-				} else if (chip->nu1619_chg_status.BPP_current_limit < 700) {
+					chip->nu1619_chg_status.bpp_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
+				} else if (chip->nu1619_chg_status.bpp_current_limit < 700) {
 					chg_err("<~WPC~> set BPP current limit 700ma\n");
-					chip->nu1619_chg_status.BPP_current_limit = 700;
-					chip->nu1619_chg_status.BPP_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
-				} else if (chip->nu1619_chg_status.BPP_current_limit < chip->nu1619_chg_status.wpc_chg_param.bpp_input_ma) {
+					chip->nu1619_chg_status.bpp_current_limit = 700;
+					chip->nu1619_chg_status.bpp_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
+				} else if (chip->nu1619_chg_status.bpp_current_limit < chip->nu1619_chg_status.wpc_chg_param.bpp_input_ma) {
 					chg_err("<~WPC~> set BPP current limit 750ma\n");
-					chip->nu1619_chg_status.BPP_current_limit = chip->nu1619_chg_status.wpc_chg_param.bpp_input_ma;
+					chip->nu1619_chg_status.bpp_current_limit = chip->nu1619_chg_status.wpc_chg_param.bpp_input_ma;
 				}
 			}
 		}
-		if(chip->nu1619_chg_status.BPP_current_limit < 300)
-			chip->nu1619_chg_status.BPP_current_limit = 300;
-		current_limit = chip->nu1619_chg_status.BPP_current_limit;
+		if(chip->nu1619_chg_status.bpp_current_limit < 300)
+			chip->nu1619_chg_status.bpp_current_limit = 300;
+		current_limit = chip->nu1619_chg_status.bpp_current_limit;
 		break;
 	}
 	if(g_oplus_chip->batt_full == true && g_oplus_chip->in_rechging == false) {
@@ -3055,8 +3055,8 @@ static int nu1619_charge_status_process(struct oplus_nu1619_ic *chip)
 					cep_nonzero_cnt = 0;
 					chip->nu1619_chg_status.charge_status = WPC_CHG_STATUS_CHARGER_FASTCHG_INIT;
 					chip->nu1619_chg_status.skewing_info = true;
-					if (chip->nu1619_chg_status.cep_info < to_cep_info(chip->nu1619_chg_status.CEP_value))
-						chip->nu1619_chg_status.cep_info = to_cep_info(chip->nu1619_chg_status.CEP_value);
+					if (chip->nu1619_chg_status.cep_info < to_cep_info(chip->nu1619_chg_status.cep_value))
+						chip->nu1619_chg_status.cep_info = to_cep_info(chip->nu1619_chg_status.cep_value);
 				}
 #endif
 				break;
@@ -3111,8 +3111,8 @@ static int nu1619_charge_status_process(struct oplus_nu1619_ic *chip)
 				cep_nonzero_cnt = 0;
 				chip->nu1619_chg_status.charge_status = WPC_CHG_STATUS_CHARGER_FASTCHG_INIT;
 				chip->nu1619_chg_status.skewing_info = true;
-				if (chip->nu1619_chg_status.cep_info < to_cep_info(chip->nu1619_chg_status.CEP_value))
-					chip->nu1619_chg_status.cep_info = to_cep_info(chip->nu1619_chg_status.CEP_value);
+				if (chip->nu1619_chg_status.cep_info < to_cep_info(chip->nu1619_chg_status.cep_value))
+					chip->nu1619_chg_status.cep_info = to_cep_info(chip->nu1619_chg_status.cep_value);
 			}
 #endif
 		}

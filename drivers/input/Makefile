@@ -33,9 +33,9 @@ obj-$(CONFIG_INPUT_KEYCOMBO)	+= keycombo.o
 obj-$(CONFIG_RMI4_CORE)		+= rmi4/
 
 #ifdef OPLUS_FEATURE_FINGERPRINT
-obj-$(CONFIG_OPPO_FINGERPRINT)  += oplus_fp_drivers/
+obj-$(CONFIG_OPLUS_FINGERPRINT)  += oplus_fp_drivers/
 #endif /* OPLUS_FEATURE_FINGERPRINT */
 ifneq ($(TARGET_PRODUCT), qssi)
-obj-$(CONFIG_OPPO_SECURE_COMMON)  += oppo_secure_common/
+obj-$(CONFIG_OPLUS_SECURE_COMMON)  += oplus_secure_drivers/
 endif
 #endif

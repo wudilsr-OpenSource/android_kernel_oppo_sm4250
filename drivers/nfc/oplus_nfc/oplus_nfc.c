@@ -8,7 +8,7 @@
 #include <linux/soc/qcom/smem.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/oplus_project.h>
 #include <linux/io.h>
 #include <stdbool.h>
 
@@ -36,9 +36,6 @@ bool is_support_chip(chip_type chip)
 	}
 
 	switch(chip) {
-		case NQ310:
-			target_chipset = "NQ310|NQ330|PN557";
-			break;
 		case NQ330:
 			target_chipset = "NQ330";
 			break;
@@ -49,13 +46,13 @@ bool is_support_chip(chip_type chip)
 			target_chipset = "SN100F";
 			break;
 		case ST21H:
-			target_chipset = "ST21H|ST54H";
+			target_chipset = "ST21H";
 			break;
 		case ST54H:
 			target_chipset = "ST54H";
 			break;
 		case PN557:
-			target_chipset = "PN557|NQ310|NQ330";
+			target_chipset = "PN557|NQ330";
 			break;
 		default:
 			target_chipset = "UNKNOWN";
@@ -117,7 +114,15 @@ static int oplus_nfc_probe(struct platform_device *pdev)
 		goto error_init;
 	}
 	project = get_project();
-	sprintf(prop_name, "chipset-%d", project);
+	//project name consists of 5-symbol
+	//project contains letters is big then 0x10000 == 65536
+	if (project > 0x10000)
+	{
+		sprintf(prop_name, "chipset-%X", project);
+	} else
+	{
+		sprintf(prop_name, "chipset-%d", project);
+	}
 	pr_err("%s, prop to be read = %s", __func__, prop_name);
 	np = dev->of_node;
 
@@ -191,4 +196,3 @@ module_exit(oplus_nfc_exit);
 
 MODULE_DESCRIPTION("OPLUS nfc chipset version");
 MODULE_LICENSE("GPL v2");
-MODULE_AUTHOR("Yukun Wang");

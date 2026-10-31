@@ -1400,6 +1400,7 @@ struct sighand_struct *__lock_task_sighand(struct task_struct *tsk,
 	return sighand;
 }
 
+#define REAPER_SZ (SZ_1M * 32 / PAGE_SIZE)
 /*
  * send signal info to all the members of a group
  */
@@ -1415,13 +1416,21 @@ int group_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 	if (!ret && sig) {
 		check_panic_on_foreground_kill(p);
 		ret = do_send_sig_info(sig, info, p, type);
-		if (capable(CAP_KILL) && sig == SIGKILL) {
-			if (!strcmp(current->comm, ULMK_MAGIC))
+
+		if (!ret && sig == SIGKILL) {
+			unsigned long pages = 0;
+
+			task_lock(p);
+			if (p->mm)
+				pages = get_mm_counter(p->mm, MM_ANONPAGES) +
+					get_mm_counter(p->mm, MM_SWAPENTS);
+			task_unlock(p);
+
+			if (pages > REAPER_SZ)
 				add_to_oom_reaper(p);
 			ulmk_update_last_kill();
 		}
 	}
-
 	return ret;
 }
 
@@ -2704,7 +2713,7 @@ relock:
 }
 
 /**
- * signal_delivered - 
+ * signal_delivered -
  * @ksig:		kernel signal struct
  * @stepping:		nonzero if debugger single-step or block-step in use
  *
@@ -4052,7 +4061,7 @@ COMPAT_SYSCALL_DEFINE4(rt_sigaction, int, sig,
 
 	ret = do_sigaction(sig, act ? &new_ka : NULL, oact ? &old_ka : NULL);
 	if (!ret && oact) {
-		ret = put_user(ptr_to_compat(old_ka.sa.sa_handler), 
+		ret = put_user(ptr_to_compat(old_ka.sa.sa_handler),
 			       &oact->sa_handler);
 		ret |= put_compat_sigset(&oact->sa_mask, &old_ka.sa.sa_mask,
 					 sizeof(oact->sa_mask));
@@ -4231,7 +4240,7 @@ SYSCALL_DEFINE2(rt_sigsuspend, sigset_t __user *, unewset, size_t, sigsetsize)
 		return -EFAULT;
 	return sigsuspend(&newset);
 }
- 
+
 #ifdef CONFIG_COMPAT
 COMPAT_SYSCALL_DEFINE2(rt_sigsuspend, compat_sigset_t __user *, unewset, compat_size_t, sigsetsize)
 {

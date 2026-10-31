@@ -90,6 +90,7 @@
 //#ifdef OPLUS_FEATURE_NWPOWER
 #include <net/oplus_nwpower.h>
 //#endif /* OPLUS_FEATURE_NWPOWER */
+
 #ifdef CONFIG_TCP_MD5SIG
 static int tcp_v4_md5_hash_hdr(char *md5_hash, const struct tcp_md5sig_key *key,
 			       __be32 daddr, __be32 saddr, const struct tcphdr *th);
@@ -1740,6 +1741,7 @@ lookup:
 			       th->dest, sdif, &refcounted);
 	if (!sk)
 		goto no_tcp_socket;
+
 	//#ifdef OPLUS_FEATURE_NWPOWER
 	oplus_match_ipa_tcp_wakeup(OPLUS_TCP_TYPE_V4, sk);
 	//#endif /* OPLUS_FEATURE_NWPOWER */

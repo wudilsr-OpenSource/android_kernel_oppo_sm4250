@@ -80,6 +80,9 @@
 #include <linux/static_key.h>
 #include <net/busy_poll.h>
 
+//#ifdef OPLUS_FEATURE_NWPOWER
+#include <net/oplus_nwpower.h>
+//#endif /* OPLUS_FEATURE_NWPOWER */
 int sysctl_tcp_max_orphans __read_mostly = NR_FILE;
 
 #define FLAG_DATA		0x01 /* Incoming frame contained data.		*/
@@ -108,10 +111,6 @@ int sysctl_tcp_max_orphans __read_mostly = NR_FILE;
 #define TCP_REMNANT (TCP_FLAG_FIN|TCP_FLAG_URG|TCP_FLAG_SYN|TCP_FLAG_PSH)
 #define TCP_HP_BITS (~(TCP_RESERVED_BITS|TCP_FLAG_PSH))
 
-//#ifdef OPLUS_FEATURE_WIFI_SLA
-void (*statistic_dev_rtt)(struct sock *sk,long rtt) = NULL;
-EXPORT_SYMBOL(statistic_dev_rtt);
-//#endif /* OPLUS_FEATURE_WIFI_SLA */
 #define REXMIT_NONE	0 /* no loss recovery to do */
 #define REXMIT_LOST	1 /* retransmit packets marked lost */
 #define REXMIT_NEW	2 /* FRTO-style transmit of unsent/new packets */
@@ -776,12 +775,6 @@ static void tcp_rtt_estimator(struct sock *sk, long mrtt_us)
 			tp->rtt_seq = tp->snd_nxt;
 			tp->mdev_max_us = tcp_rto_min_us(sk);
 		}
-                //#ifdef OPLUS_FEATURE_WIFI_SLA
-                //Add code for appo sla function
-                if(TCP_ESTABLISHED == sk->sk_state && NULL != statistic_dev_rtt){
-                        statistic_dev_rtt(sk,mrtt_us);
-                }
-                //#endif /* OPLUS_FEATURE_WIFI_SLA */
 	} else {
 		/* no previous measure. */
 		srtt = m << 3;		/* take the measured time to be rtt */
@@ -4785,6 +4778,11 @@ queue_and_out:
 
 	if (!after(TCP_SKB_CB(skb)->end_seq, tp->rcv_nxt)) {
 		/* A retransmit, 2nd most common case.  Force an immediate ack. */
+
+		//#ifdef OPLUS_FEATURE_NWPOWER
+		oplus_match_tcp_input_retrans(sk);
+		//#endif /* OPLUS_FEATURE_NWPOWER */
+
 		NET_INC_STATS(sock_net(sk), LINUX_MIB_DELAYEDACKLOST);
 		tcp_dsack_set(sk, TCP_SKB_CB(skb)->seq, TCP_SKB_CB(skb)->end_seq);
 

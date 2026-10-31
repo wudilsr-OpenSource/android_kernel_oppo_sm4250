@@ -217,8 +217,8 @@ static unsigned int oplus_nf_hooks_lm_detect(void *priv,
 		return NF_ACCEPT;
 	}
 
-	if ((iph = ip_hdr(skb)) != NULL && iph->protocol == IPPROTO_TCP) {
-		if (is_wechat_skb(ct, skb)) {
+    if (is_wechat_skb(ct, skb)) {
+        if ((iph = ip_hdr(skb)) != NULL && iph->protocol == IPPROTO_TCP) {
     	    tot_len = ntohs(iph->tot_len);
     		if (unlikely(skb_linearize(skb))) {
     		    return NF_ACCEPT;
@@ -270,8 +270,8 @@ static unsigned int oplus_nf_hooks_v6_lm_detect(void *priv,
 			return NF_ACCEPT;
 		}
 
-		if (skb->protocol == htons(ETH_P_IPV6) && (ipv6h = ipv6_hdr(skb)) != NULL && ipv6h->nexthdr== NEXTHDR_TCP) {
-			if (is_wechat_skb(ct, skb)) {
+		if (is_wechat_skb(ct, skb)) {
+			if (skb->protocol == htons(ETH_P_IPV6) && (ipv6h = ipv6_hdr(skb)) != NULL && ipv6h->nexthdr== NEXTHDR_TCP) {
 				tot_len = ntohs(ipv6h->payload_len);
 				ip_proto = ipv6h->nexthdr;
 				if (unlikely(skb_linearize(skb))) {

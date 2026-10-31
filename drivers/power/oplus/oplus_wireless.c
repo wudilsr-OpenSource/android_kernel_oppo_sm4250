@@ -374,3 +374,9 @@ void oplus_wpc_init(struct oplus_wpc_chip *chip)
 {
 	g_wpc_chip = chip;
 }
+
+void oplus_get_wpc_chip_handle(struct oplus_wpc_chip **chip)
+{
+	*chip = g_wpc_chip;
+}
+

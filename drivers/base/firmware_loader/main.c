@@ -662,22 +662,6 @@ request_firmware(const struct firmware **firmware_p, const char *name,
 }
 EXPORT_SYMBOL(request_firmware);
 
-#ifdef OPLUS_FEATURE_TP_BSPFWUPDATE
-int request_firmware_select(const struct firmware **firmware_p, const char *name,
-		 struct device *device)
-{
-	int ret;
-
-	/* Need to pin this module until return */
-	__module_get(THIS_MODULE);
-	ret = _request_firmware(firmware_p, name, device, NULL, 0,
-				FW_OPT_UEVENT | FW_OPT_COMPARE);
-	module_put(THIS_MODULE);
-	return ret;
-}
-EXPORT_SYMBOL(request_firmware_select);
-#endif/*OPLUS_FEATURE_TP_BSPFWUPDATE*/
-
 /**
  * firmware_request_nowarn() - request for an optional fw module
  * @firmware: pointer to firmware image

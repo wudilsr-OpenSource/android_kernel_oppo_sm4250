@@ -334,7 +334,7 @@ enum req_flag_bits {
 	__REQ_INTEGRITY,	/* I/O includes block integrity payload */
 	__REQ_FUA,		/* forced unit access */
 	__REQ_PREFLUSH,		/* request for cache flush */
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	__REQ_UX,		/* ux activity */
 #endif
 	__REQ_FG,               /* foreground activity */
@@ -365,7 +365,7 @@ enum req_flag_bits {
 #define REQ_INTEGRITY		(1ULL << __REQ_INTEGRITY)
 #define REQ_FUA			(1ULL << __REQ_FUA)
 #define REQ_PREFLUSH		(1ULL << __REQ_PREFLUSH)
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 #define REQ_UX			(1ULL << __REQ_UX)
 #endif
 #define REQ_FG                  (1ULL << __REQ_FG)

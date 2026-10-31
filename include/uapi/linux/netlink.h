@@ -34,32 +34,28 @@
 #define NETLINK_INET_DIAG	NETLINK_SOCK_DIAG
 
 /* #if defined(OPLUS_FEATURE_HANS_FREEZE) && defined(CONFIG_OPLUS_FEATURE_HANS) */
-#define NETLINK_OPLUS_HANS       28      /* Socket for freezing solution */
+#define NETLINK_OPLUS_HANS       29      /* Socket for freezing solution */
 /* #endif */ /*OPLUS_FEATURE_HANS_FREEZE*/
 
 #ifdef OPLUS_FEATURE_WIFI_LUCKYMONEY
 #define NETLINK_OPLUS_NF_HOOKS	32
 #endif /* OPLUS_FEATURE_WIFI_LUCKYMONEY */
-//#ifdef OPLUS_FEATURE_WIFI_SLA
-#define NETLINK_OPLUS_SLA  33      /*SLA NETLINK SOCK*/
-//#endif /* OPLUS_FEATURE_WIFI_SLA */
 
 //Add for apps network monitors
 #define NETLINK_OPLUS_APPS_MONITOR  35      /* Apps monitor NETLINK SOCK */
 //#endif /* VENDOR_EDIT */
-//#ifdef OPLUS_FEATURE_NWPOWER
-#define NETLINK_OPLUS_NWPOWERSTATE	36	/*OPLUS NW PowerState*/
-//#endif /* OPLUS_FEATURE_NWPOWER */
 //#ifdef OPLUS_FEATURE_DHCP
 #define NETLINK_OPLUS_DHCP 38
 //#endif /* OPLUS_FEATURE_DHCP */
+/* #ifdef OPLUS_CONFIG_THEIA*/
 
-//#ifdef VENDOR_EDIT
-#define NETLINK_OPPO_KERNEL2USER  37      /* kernel data info to user space */
-//#endif /* VENDOR_EDIT */
-
-//#define MAX_LINKS 40
-#define MAX_LINKS 42
+//#ifdef OPLUS_FEATURE_NWPOWER
+#define NETLINK_OPLUS_NWPOWERSTATE	36	/*OPLUS NW PowerState*/
+//#endif /* OPLUS_FEATURE_NWPOWER */
+#define OPLUS_NETLINK_THEIA_KEVENT 43
+/* #endif OPLUS_CONFIG_THEIA*/
+//#define MAX_LINKS 45
+#define MAX_LINKS 45
 //#endif /* OPLUS_FEATURE_WIFI_CAPCENTER */
 
 struct sockaddr_nl {

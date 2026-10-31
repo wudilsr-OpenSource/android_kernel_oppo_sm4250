@@ -29,17 +29,21 @@
 #if defined(OPLUS_FEATURE_IOMONITOR) && defined(CONFIG_IOMONITOR)
 #include <linux/iomonitor/iomonitor.h>
 #endif /*OPLUS_FEATURE_IOMONITOR*/
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 extern unsigned int walt_scale_demand_divisor;
 bool ux_task_misfit(struct task_struct *p, int cpu);
 #define scale_demand(d) ((d)/walt_scale_demand_divisor)
-#endif /* OPLUS_FEATURE_UIFIRST */
-#ifdef OPLUS_FEATURE_UIFIRST
-#include <linux/uifirst/uifirst_sched_common.h>
-#endif /* OPLUS_FEATURE_UIFIRST */
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+#include <linux/sched_assist/sched_assist_common.h>
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+#include <linux/special_opt/special_opt.h>
+#endif
+#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
 // Add for get cpu load
-#include <soc/oppo/oppo_healthinfo.h>
+#include <soc/oplus/healthinfo.h>
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
 
 #ifdef CONFIG_SMP
@@ -986,7 +990,7 @@ update_stats_wait_end(struct cfs_rq *cfs_rq, struct sched_entity *se)
 			return;
 		}
 		trace_sched_stat_wait(p, delta);
-#if defined (OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
+#if defined (OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
 // Add for get sched latency stat
 		ohm_schedstats_record(OHM_SCHED_SCHEDLATENCY, p, (delta >> 20));
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
@@ -1064,12 +1068,12 @@ update_stats_enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 #endif /*OPLUS_FEATURE_IOMONITOR*/
                        
 
-#if defined (OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
+#if defined (OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
 // Add for get iowait
 				ohm_schedstats_record(OHM_SCHED_IOWAIT, tsk, (delta >> 20));
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
 			}
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
+#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
 			if(!tsk->in_iowait) {
 				 ohm_schedstats_record(OHM_SCHED_DSTATE, tsk, (delta >> 20));
 			}
@@ -4030,6 +4034,10 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 		if (task_boost > TASK_BOOST_ON_MID)
 			return false;
 	}
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (sched_assist_task_misfit(p, cpu, 0))
+		return false;
+#endif
 
 	return task_fits_capacity(p, capacity, cpu);
 }
@@ -4194,11 +4202,20 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 
 		vruntime -= thresh;
 #ifdef CONFIG_SCHED_WALT
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+		if (entity_is_task(se)) {
+			if (((per_task_boost(task_of(se)) ==
+					TASK_BOOST_STRICT_MAX) ||
+					walt_low_latency_task(task_of(se)) ||
+					task_rtg_high_prio(task_of(se))) &&
+					!test_task_ux(task_of(se))) {
+#else
 		if (entity_is_task(se)) {
 			if ((per_task_boost(task_of(se)) ==
 					TASK_BOOST_STRICT_MAX) ||
 					walt_low_latency_task(task_of(se)) ||
 					task_rtg_high_prio(task_of(se))) {
+#endif
 				vruntime -= sysctl_sched_latency;
 				vruntime -= thresh;
 				se->vruntime = vruntime;
@@ -4210,9 +4227,9 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 
 	/* ensure we never gain time by being placed backwards. */
 	se->vruntime = max_vruntime(se->vruntime, vruntime);
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	place_entity_adjust_ux_task(cfs_rq, se, initial);
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 }
 
 static void check_enqueue_throttle(struct cfs_rq *cfs_rq);
@@ -4305,7 +4322,11 @@ enqueue_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	enqueue_runnable_load_avg(cfs_rq, se);
 	account_entity_enqueue(cfs_rq, se);
 
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+	if (flags & ENQUEUE_WAKEUP || should_force_adjust_vruntime(se))
+#else
 	if (flags & ENQUEUE_WAKEUP)
+#endif
 		place_entity(cfs_rq, se, 0);
 
 	check_schedstat_required();
@@ -4432,6 +4453,11 @@ check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 
 	ideal_runtime = sched_slice(cfs_rq, curr);
 	delta_exec = curr->sum_exec_runtime - curr->prev_sum_exec_runtime;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (is_heavy_load_task(current))
+		ideal_runtime = HEAVY_LOAD_RUNTIME;
+#endif
+
 	if (delta_exec > ideal_runtime) {
 		resched_curr(rq_of(cfs_rq));
 		/*
@@ -4441,6 +4467,10 @@ check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 		clear_buddies(cfs_rq, curr);
 		return;
 	}
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (is_heavy_load_task(current))
+		return;
+#endif
 
 	/*
 	 * Ensure that a task that missed wakeup preemption by a
@@ -4516,6 +4546,10 @@ pick_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 		left = curr;
 
 	se = left; /* ideally we run the leftmost entity */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (should_ux_task_skip_further_check(se))
+		return se;
+#endif
 
 	/*
 	 * Avoid running the skip buddy, if running something else can
@@ -5593,11 +5627,9 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 		flags = ENQUEUE_WAKEUP;
 	}
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled) {
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 		enqueue_ux_thread(rq, p);
-	}
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
@@ -5614,6 +5646,9 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	if (!se) {
 		add_nr_running(rq, 1);
 		inc_rq_walt_stats(rq, p);
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+		inc_ld_stats(p, rq);
+#endif
 		/*
 		 * Since new tasks are assigned an initial util_avg equal to
 		 * half of the spare capacity of their CPU, tiny tasks have the
@@ -5702,11 +5737,9 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 		}
 		flags |= DEQUEUE_SLEEP;
 	}
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled) {
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 		dequeue_ux_thread(rq, p);
-	}
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
@@ -5723,6 +5756,9 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	if (!se) {
 		sub_nr_running(rq, 1);
 		dec_rq_walt_stats(rq, p);
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+		dec_ld_stats(p, rq);
+#endif
 	}
 
 	util_est_dequeue(&rq->cfs, p, task_sleep);
@@ -6961,14 +6997,19 @@ static int get_start_cpu(struct task_struct *p)
 			rd->max_cap_orig_cpu : rd->mid_cap_orig_cpu;
 	}
 
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled && sysctl_slide_boost_enabled && p->static_ux == 2 &&
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (sched_assist_scene(SA_SLIDE) && is_heavy_ux_task(p) &&
 	(task_util(p) >= sysctl_boost_task_threshold ||
 	 scale_demand(p->ravg.sum) >= sysctl_boost_task_threshold)) {
 		start_cpu = rd->mid_cap_orig_cpu == -1 ?
 			rd->max_cap_orig_cpu : rd->mid_cap_orig_cpu;
 	}
 #endif
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (sysctl_cpu_multi_thread && !is_heavy_load_task(p))
+		return rd->min_cap_orig_cpu;
+#endif
+
 	if (task_boost > TASK_BOOST_ON_MID) {
 		start_cpu = rd->max_cap_orig_cpu;
 		return start_cpu;
@@ -6994,6 +7035,9 @@ enum fastpaths {
 	NONE = 0,
 	SYNC_WAKEUP,
 	PREV_CPU_FASTPATH,
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+	NR_WAKEUP_SELECT,
+#endif
 };
 
 static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
@@ -7025,6 +7069,9 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 	int isolated_candidate = -1;
 	unsigned int target_nr_rtg_high_prio = UINT_MAX;
 	bool rtg_high_prio_task = task_rtg_high_prio(p);
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+	bool strict = fbt_env->strict_max;
+#endif
 
 	/*
 	 * In most cases, target_capacity tracks capacity_orig of the most
@@ -7040,7 +7087,11 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 	if (prefer_idle && boosted)
 		target_capacity = 0;
 
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (fbt_env->strict_max  || p->in_iowait ||(sysctl_cpu_multi_thread && !is_heavy_load_task(p)))
+#else
 	if (fbt_env->strict_max || p->in_iowait)
+#endif
 		most_spare_wake_cap = LONG_MIN;
 
 	/* Find start CPU based on boost value */
@@ -7064,6 +7115,14 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 		}
 	}
 
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+	/* enabled nr-balance to spread tasks */
+	sched_assist_spread_tasks(p, p->cpus_allowed, fbt_env->start_cpu, fbt_env->skip_cpu, cpus, strict);
+	if (!cpumask_empty(cpus)) {
+		fbt_env->fastpath = NR_WAKEUP_SELECT;
+		goto out;
+	}
+#endif
 	/* Scan CPUs in all SDs */
 	sg = start_sd->groups;
 	do {
@@ -7079,20 +7138,10 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 			if (!cpu_online(i) || cpu_isolated(i))
 				continue;
 
-#ifdef OPLUS_FEATURE_UIFIRST
-			if (sysctl_uifirst_enabled && test_task_ux(p)) {
-				if (sysctl_launcher_boost_enabled && is_heavy_ux_task(p) && !test_ux_task_cpu(i))
-					continue;
-
-				if (!sysctl_launcher_boost_enabled || !is_heavy_ux_task(p)) {
-					if (cpu_rq(i)->rt.rt_nr_running)
-						continue;
-
-					if (!list_empty(&cpu_rq(i)->ux_thread_list))
-						continue;
-				}
-			}
-#endif /* OPLUS_FEATURE_UIFIRST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+			if (should_ux_task_skip_cpu(p, i))
+				continue;
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 			if (isolated_candidate == -1)
 				isolated_candidate = i;
@@ -7124,6 +7173,13 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 				most_spare_wake_cap = spare_wake_cap;
 				most_spare_cap_cpu = i;
 			}
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+			else if (spare_wake_cap == most_spare_wake_cap && sysctl_cpu_multi_thread
+					&& !is_heavy_load_task(p)
+					&& cpu_rq(i)->nr_running < cpu_rq(most_spare_cap_cpu)->nr_running) {
+					most_spare_cap_cpu = i;
+			}
+#endif
 
 			if (per_task_boost(cpu_rq(i)->curr) ==
 					TASK_BOOST_STRICT_MAX)
@@ -7413,6 +7469,13 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 					break;
 			}
 		}
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+		if (sysctl_cpu_multi_thread && !is_heavy_load_task(p)
+			&& next_group_higher_cap
+			&& (best_idle_cpu != -1 || target_cpu != -1 || most_spare_cap_cpu != -1)) {
+			break;
+		}
+#endif
 
 	} while (sg = sg->next, sg != start_sd->groups);
 
@@ -7854,6 +7917,9 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 
 	if (sync && (need_idle || (is_rtg && curr_is_rtg)))
 		sync = 0;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	ux_skip_sync_wakeup(p, &sync);
+#endif
 
 	if (sysctl_sched_sync_hint_enable && sync &&
 				bias_to_this_cpu(p, cpu, start_cpu)) {
@@ -7896,6 +7962,13 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 		select_cpu_candidates(sd, candidates, pd, p, prev_cpu);
 	}
 
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+	if (fbt_env.fastpath == NR_WAKEUP_SELECT) {
+		best_energy_cpu = cpumask_first(candidates);
+		rcu_read_unlock();
+		goto oplus_done;
+	}
+#endif
 	/* Bail out if no candidate was found. */
 	weight = cpumask_weight(candidates);
 	if (!weight) {
@@ -7917,13 +7990,8 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 				}
 			}
 		}
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (test_task_ux(p)
-#ifdef CONFIG_CAMERA_OPT
-		|| (sysctl_camera_opt_enabled && p->camera_opt)
-#endif
-		)
-		set_ux_task_cpu_common_by_prio(p, &best_energy_cpu, true, false);
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+		set_ux_task_cpu_common_by_prio(p, &best_energy_cpu, true, false, 0);
 #endif
 		goto unlock;
 	}
@@ -7982,24 +8050,19 @@ unlock:
 	    (prev_energy != ULONG_MAX) && (best_energy_cpu != prev_cpu) &&
 	    ((prev_energy - best_energy) <= prev_energy >> 4))
 		best_energy_cpu = prev_cpu;
-
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled && sysctl_launcher_boost_enabled &&
-		is_heavy_ux_task(p) && !test_ux_prefer_cpu(p, best_energy_cpu)) {
-		find_ux_task_cpu(p, &best_energy_cpu);
-	}
-#endif /* OPLUS_FEATURE_UIFIRST */
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled && sysctl_slide_boost_enabled &&
-		p->static_ux == 2 && ux_task_misfit(p, best_energy_cpu)) {
-		find_ux_task_cpu(p, &best_energy_cpu);
-	}
-#ifdef CONFIG_CAMERA_OPT
-	else if (weight && sysctl_camera_opt_enabled && p->camera_opt && ux_task_misfit(p, cpu)) {
-		set_ux_task_cpu_common_by_prio(p, &best_energy_cpu, true, false);
-	}
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_SPREAD)
+oplus_done:
 #endif
-#endif /* OPLUS_FEATURE_UIFIRST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (!fbt_env.fastpath)
+		set_ux_task_to_prefer_cpu(p, &best_energy_cpu);
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (sched_assist_scene(SA_SLIDE) && is_heavy_ux_task(p) &&
+		ux_task_misfit(p, best_energy_cpu)) {
+		find_ux_task_cpu(p, &best_energy_cpu);
+	}
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 done:
 
 	trace_sched_task_util(p, cpumask_bits(candidates)[0], best_energy_cpu,
@@ -8269,6 +8332,10 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 
 	if (unlikely(se == pse))
 		return;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (is_heavy_load_task(current))
+		return;
+#endif
 
 	/*
 	 * This is possible from callers such as attach_tasks(), in which we
@@ -8312,11 +8379,12 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	find_matching_se(&se, &pse);
 	update_curr(cfs_rq_of(se));
 	BUG_ON(!pse);
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled && test_task_ux(p) && !test_task_ux(curr)) {
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (should_ux_preempt_wakeup(p, curr))
 		goto preempt;
-	}
-#endif /* OPLUS_FEATURE_UIFIRST */
+	else if (test_task_ux(curr))
+		return;
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 	if (wakeup_preempt_entity(se, pse) == 1) {
 		/*
 		 * Bias pick_next to pick the sched entity that is
@@ -8354,6 +8422,9 @@ pick_next_task_fair(struct rq *rq, struct task_struct *prev, struct rq_flags *rf
 	struct sched_entity *se;
 	struct task_struct *p;
 	int new_tasks;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	struct task_struct *pos;
+#endif
 
 again:
 	if (!cfs_rq->nr_running)
@@ -8407,11 +8478,9 @@ again:
 	} while (cfs_rq);
 
 	p = task_of(se);
-#ifdef OPLUS_FEATURE_UIFIRST
-	if (sysctl_uifirst_enabled) {
-		pick_ux_thread(rq, &p, &se);
-	}
-#endif /* OPLUS_FEATURE_UIFIRST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	pick_ux_thread(rq, &p, &se);
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 	/*
 	 * Since we haven't yet done put_prev_entity and if the selected task
@@ -8447,11 +8516,23 @@ simple:
 
 	do {
 		se = pick_next_entity(cfs_rq, NULL);
+#ifndef OPLUS_FEATURE_SCHED_ASSIST
 		set_next_entity(cfs_rq, se);
+#endif
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
 
 	p = task_of(se);
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	pos = list_first_entry(&rq->cfs_tasks, typeof(*pos), se.group_node);
+	if (sysctl_cpu_multi_thread && is_heavy_load_task(pos) && p != pos) {
+		p = pos;
+		se = &p->se;
+	}
+	for_each_sched_entity(se) {
+		set_next_entity(cfs_rq_of(se), se);
+	}
+#endif
 
 done: __maybe_unused;
 #ifdef CONFIG_SMP
@@ -9066,16 +9147,10 @@ redo:
 		if (!can_migrate_task(p, env))
 			goto next;
 
-#ifdef OPLUS_FEATURE_UIFIRST
-		if (sysctl_uifirst_enabled && test_task_ux(p)) {
-			if (sysctl_launcher_boost_enabled && is_heavy_ux_task(p) && test_ux_task_cpu(task_cpu(p)) &&
-					!test_ux_task_cpu(env->dst_cpu))
-				goto next;
-
-			if ((!sysctl_launcher_boost_enabled || is_heavy_ux_task(p)) && !list_empty(&env->dst_rq->ux_thread_list))
-				goto next;
-		}
-#endif /* OPLUS_FEATURE_UIFIRST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+		if (should_ux_task_skip_cpu(p, env->dst_cpu))
+			goto next;
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 		/*
 		 * Depending of the number of CPUs and tasks and the
 		 * cgroup hierarchy, task_h_load() can return a null
@@ -13095,7 +13170,7 @@ static inline void walt_check_for_rotation(struct rq *rq)
 {
 }
 #endif
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 bool ux_task_misfit(struct task_struct *p, int cpu)
 {
 	int num_mincpu = cpumask_weight(topology_core_cpumask(0));
@@ -13116,15 +13191,12 @@ void check_for_migration(struct rq *rq, struct task_struct *p)
 	int ret;
 
 
-	if (rq->misfit_task_load
-#ifdef OPLUS_FEATURE_UIFIRST
-		|| (sysctl_uifirst_enabled && sysctl_slide_boost_enabled &&
-			p->static_ux == 2 && ux_task_misfit(p, prev_cpu))
-#ifdef CONFIG_CAMERA_OPT
-		|| (sysctl_camera_opt_enabled && p->camera_opt && ux_task_misfit(p, prev_cpu))
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	if (rq->misfit_task_load || (sched_assist_scene(SA_SLIDE) &&
+		is_heavy_ux_task(p) && ux_task_misfit(p, prev_cpu))) {
+#else
+	if (rq->misfit_task_load) {
 #endif
-#endif
-		) {
 		if (rq->curr->state != TASK_RUNNING ||
 		    rq->curr->nr_cpus_allowed == 1)
 			return;

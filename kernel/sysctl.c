@@ -131,6 +131,11 @@ extern int sysctl_nr_trim_pages;
 static int sixty = 60;
 #endif
 
+#ifdef CONFIG_MMAP_LOCK_OPT
+//#ifdef CONFIG_UXCHAIN_V2
+int sysctl_uxchain_v2 = 1;
+#endif
+
 static int __maybe_unused neg_one = -1;
 static int __maybe_unused neg_three = -3;
 
@@ -148,7 +153,7 @@ extern int direct_vm_swappiness;
 static int two_hundred = 200;
 #endif /*OPLUS_FEATURE_ZRAM_OPT*/
 static int one_thousand = 1000;
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 unsigned int sysctl_uxio_io_opt = true;
 bool sysctl_wbt_enable = true;
 #endif
@@ -351,13 +356,16 @@ static int max_sched_tunable_scaling = SCHED_TUNABLESCALING_END-1;
 #endif /* CONFIG_SMP */
 #endif /* CONFIG_SCHED_DEBUG */
 
-#ifdef OPLUS_FEATURE_UIFIRST
-int sysctl_slide_boost_enabled = 0;
-int sysctl_animation_type = 0;
-int sysctl_boost_task_threshold = 51;
-#ifdef CONFIG_CAMERA_OPT
-int sysctl_camera_opt_enabled = 0;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+int sysctl_sched_assist_enabled = 1;
+int sysctl_sched_assist_scene = 0;
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+int sysctl_cpu_multi_thread = 0;
 #endif
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+int sysctl_slide_boost_enabled = 0;
+int sysctl_boost_task_threshold = 51;
 int sysctl_frame_rate = 60;
 int sched_frame_rate_handler(struct ctl_table *table, int write, void __user *buffer, size_t *lenp, loff_t *ppos)
 {
@@ -370,12 +378,7 @@ int sched_frame_rate_handler(struct ctl_table *table, int write, void __user *bu
 
 	return ret;
 }
-#endif /* OPLUS_FEATURE_UIFIRST */
-
-#ifdef OPLUS_FEATURE_UIFIRST
-int sysctl_uifirst_enabled = 1;
-int sysctl_launcher_boost_enabled = 0;
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 #ifdef CONFIG_COMPACTION
 static int min_extfrag_threshold;
@@ -514,7 +517,7 @@ static struct ctl_table kern_table[] = {
 		.extra1         = &one,
 		.extra2         = &one_hundred,
 	},
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 {
 		.procname	= "uxio_first_opt",
 		.data		= &sysctl_uxio_io_opt,
@@ -1518,7 +1521,7 @@ static struct ctl_table kern_table[] = {
 /* record the hung task killing */
 	{
 		.procname	= "hung_task_kill",
-		.data		= &sysctl_hung_task_oppo_kill,
+		.data		= &sysctl_hung_task_kill,
 		.maxlen		= 128,
 		.mode		= 0666,
 		.proc_handler	= proc_dostring,
@@ -1687,30 +1690,32 @@ static struct ctl_table kern_table[] = {
 	},
 #endif
 #endif /* OPLUS_FEATURE_TASK_CPUSTATS */
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	{
-		.procname	= "uifirst_enabled",
-		.data		= &sysctl_uifirst_enabled,
+		.procname	= "sched_assist_enabled",
+		.data		= &sysctl_sched_assist_enabled,
 		.maxlen		= sizeof(int),
 		.mode		= 0666,
 		.proc_handler	= proc_dointvec,
 	},
 	{
-		.procname	= "launcher_boost_enabled",
-		.data		= &sysctl_launcher_boost_enabled,
+		.procname	= "sched_assist_scene",
+		.data		= &sysctl_sched_assist_scene,
 		.maxlen		= sizeof(int),
+		.mode		= 0666,
+		.proc_handler = sysctl_sched_assist_scene_handler,
+	},
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	{
+		.procname	= "cpu_multi_thread",
+		.data		= &sysctl_cpu_multi_thread,
+		.maxlen 	= sizeof(int),
 		.mode		= 0666,
 		.proc_handler = proc_dointvec,
 	},
-	{
-		.procname	= "animation_type",
-		.data		= &sysctl_animation_type,
-		.maxlen		= sizeof(int),
-        .mode		= 0666,
-	.proc_handler = proc_dointvec,
-    },
-#endif /* OPLUS_FEATURE_UIFIRST */
-#ifdef OPLUS_FEATURE_UIFIRST
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	{
 		.procname	= "frame_rate",
 		.data		= &sysctl_frame_rate,
@@ -1718,8 +1723,8 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0666,
 		.proc_handler = sched_frame_rate_handler,
 	},
-#endif /* OPLUS_FEATURE_UIFIRST */
-#ifdef OPLUS_FEATURE_UIFIRST
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	{
 		.procname	= "slide_boost_enabled",
 		.data		= &sysctl_slide_boost_enabled,
@@ -1727,16 +1732,18 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0666,
 		.proc_handler = proc_dointvec,
 	},
-#ifdef CONFIG_CAMERA_OPT
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef CONFIG_MMAP_LOCK_OPT
+//#ifdef CONFIG_UXCHAIN_V2
 	{
-		.procname       = "camera_opt_enable",
-                .data           = &sysctl_camera_opt_enabled,
-                .maxlen         = sizeof(int),
-                .mode           = 0666,
-                .proc_handler = proc_dointvec,
+		.procname	= "uxchain_v2",
+		.data		= &sysctl_uxchain_v2,
+		.maxlen = sizeof(int),
+		.mode		= 0666,
+		.proc_handler = proc_dointvec,
 	},
 #endif
-#endif /* OPLUS_FEATURE_UIFIRST */
+
 	{ }
 };
 

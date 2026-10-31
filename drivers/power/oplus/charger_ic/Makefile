@@ -156,3 +156,4 @@ else
 endif 
 
 	obj-y   += oplus_short_ic.o
+	obj-y   += oplus_switching.o

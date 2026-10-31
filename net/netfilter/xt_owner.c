@@ -147,14 +147,15 @@ owner_mt(const struct sk_buff *skb, struct xt_action_param *par)
             sock_gen_put(sk);
             sk = NULL;
          }
-#ifdef VENDOR_EDIT
+         //#ifdef OPLUS_FEATURE_XTOWNER_INPUT
          else if (sk && sk->sk_state == TCP_CLOSE) {
             sock_gen_put(sk);
          } else if (sk) {
-            pr_info("owner_mt: sk: %px, sk->sk_state: %d \n", sk, sk->sk_state);
+            pr_debug("owner_mt: sk: %px, sk->sk_state: %d \n", sk, sk->sk_state);
+            //WARN_ON(1);
             sock_gen_put(sk);
          }
-#endif
+         //#endif
     }
     if(sk) {
         pr_debug("owner_mt: sk: %p, sk->sk_state: %d, sk->sk_socket: %p\n", sk, sk->sk_state, sk->sk_socket);

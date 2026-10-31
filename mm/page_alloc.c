@@ -69,6 +69,7 @@
 #include <linux/nmi.h>
 #include <linux/khugepaged.h>
 #include <linux/psi.h>
+#include <trace/hooks/vh_vmscan.h>
 
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
@@ -79,7 +80,7 @@
 #include "multi_freearea.h"
 #endif
 #if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_MEM_MONITOR)
-#include <linux/oppo_healthinfo/memory_monitor.h>
+#include <linux/healthinfo/memory_monitor.h>
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
 
 /* prevent >1 _updater_ of zone percpu pageset ->high and ->batch fields */
@@ -3451,6 +3452,8 @@ struct page *rmqueue(struct zone *preferred_zone,
 
 	__count_zid_vm_events(PGALLOC, page_zonenum(page), 1 << order);
 	zone_statistics(preferred_zone, zone);
+	trace_android_vh_rmqueue(preferred_zone, zone, order,
+			gfp_flags, alloc_flags, migratetype);
 	local_irq_restore(flags);
 
 out:
@@ -3587,7 +3590,7 @@ bool __zone_watermark_ok(struct zone *z, unsigned int order, unsigned long mark,
 			min -= min / 2;
 		else
 #if defined(OPLUS_FEATURE_ZRAM_OPT) && defined(CONFIG_OPLUS_ZRAM_OPT)
-/* 
+/*
  * ALLOC_HIGH:ALLOC_HARDER is about 1:10, so more for ALLOC_HARDER
  * and since 2-order might allocate from MIGRATE_HIGHATOMIC as fallback,
  * so here should make it easier for ALLOC_HARDER.
@@ -4415,7 +4418,6 @@ retry:
 	 */
 	if (!page && !drained) {
 		unreserve_highatomic_pageblock(ac, false);
-		drain_all_pages(NULL);
 		drained = true;
 		goto retry;
 	}
@@ -4682,10 +4684,10 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	 */
 	if (WARN_ON_ONCE((gfp_mask & (__GFP_ATOMIC|__GFP_DIRECT_RECLAIM)) ==
 #ifdef VENDOR_EDIT
-				(__GFP_ATOMIC|__GFP_DIRECT_RECLAIM)) && 
+				(__GFP_ATOMIC|__GFP_DIRECT_RECLAIM)) &&
                 !(gfp_mask & ___GFP_HIGH_ATOMIC_ZRAM))
 #else
-				(__GFP_ATOMIC|__GFP_DIRECT_RECLAIM))) 
+				(__GFP_ATOMIC|__GFP_DIRECT_RECLAIM)))
 #endif
 		gfp_mask &= ~__GFP_ATOMIC;
 
@@ -4919,9 +4921,12 @@ fail:
 	warn_alloc(gfp_mask, ac->nodemask,
 			"page allocation failure: order:%u", order);
 got_pg:
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_MEM_MONITOR)
-	memory_alloc_monitor(gfp_mask, order, jiffies_to_msecs(jiffies - oppo_alloc_start));
-#endif /*OPLUS_FEATURE_HEALTHINFO*/
+#ifdef OPLUS_FEATURE_HEALTHINFO
+#ifdef CONFIG_OPLUS_MEM_MONITOR
+	memory_alloc_monitor(gfp_mask, order, jiffies_to_msecs(jiffies - oplus_alloc_start));
+	trace_android_vh_alloc_pages_slowpath(gfp_mask, order, oplus_alloc_start);
+#endif
+#endif /* OPLUS_FEATURE_HEALTHINFO */
 	return page;
 }
 

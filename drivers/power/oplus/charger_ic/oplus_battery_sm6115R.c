@@ -5824,6 +5824,8 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 #ifdef OPLUS_FEATURE_CHG_BASIC
 /* Yichun.Chen  PSW.BSP.CHG  2019-04-08  for charge */
 	chg_debug("%d\n", vbus_rising);
+	oplus_chg_check_break(vbus_rising);
+
 #endif
 
 	if (vbus_rising) {
@@ -13895,7 +13897,7 @@ static bool opluschg_get_otg_switch(void)
 		return false;
 	}
 
-	return g_oplus_chip->otg_switch;
+	return g_oplus_chip->ui_otg_switch;
 }
 
 static bool opluschg_get_otg_online(void)

@@ -120,6 +120,7 @@ static void oplus_get_smooth_soc_switch(struct oplus_chg_chip *chip);
 static void oplus_chg_pd_config(struct oplus_chg_chip *chip);
 static void oplus_chg_qc_config(struct oplus_chg_chip *chip);
 #ifdef  CONFIG_FB
+static void oplus_chg_check_abnormal_adapter(int vbus_rising);
 static int fb_notifier_callback(struct notifier_block *nb, unsigned long event, void *data);
 #endif
 void oplus_chg_ui_soc_decimal_init(void);
@@ -514,8 +515,8 @@ int oplus_battery_set_property(struct power_supply *psy,
 					chip->mmi_chg = 0;
 					oplus_chg_turn_off_charging(chip);
 					if (oplus_vooc_get_fastchg_started() == true) {
-						oplus_vooc_turn_off_fastchg();
 						chip->mmi_fastchg = 0;
+						oplus_vooc_turn_off_fastchg();
 					}
 				}
 			} else {
@@ -2159,7 +2160,7 @@ int oplus_chg_init(struct oplus_chg_chip *chip)
 	}
 #endif
 
-	oplus_chg_debug_info_init();
+	oplus_chg_debug_info_init(chip);
 	init_proc_chg_log();
 	init_proc_chg_cycle();
 	init_proc_critical_log();
@@ -5506,6 +5507,7 @@ void oplus_chg_variables_reset(struct oplus_chg_chip *chip, bool in)
 	chip->usbtemp_cool_down = 0;
 	chip->pd_chging = false;
 	chip->vooc_start_fail = false;
+	chip->prop_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 }
 
 static void oplus_chg_variables_init(struct oplus_chg_chip *chip)
@@ -5565,6 +5567,7 @@ static void oplus_chg_variables_init(struct oplus_chg_chip *chip)
 	chip->smooth_to_soc_gap = 5;
 	chip->smart_charge_user = SMART_CHARGE_USER_OTHER;
 	chip->usbtemp_cool_down = 0;
+	chip->detect_detach_unexpeactly = 0;
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 	chip->usb_online = false;
 	chip->otg_online = false;
@@ -5674,6 +5677,8 @@ static void oplus_chg_variables_init(struct oplus_chg_chip *chip)
 	chip->voocphy.fast_chg_type = FASTCHG_CHARGER_TYPE_UNKOWN;
 	chip->detect_detach_unexpeactly = 0;
 	chip->vooc_start_fail = false;
+	chip->svooc_detach_time = 0;
+	chip->svooc_detect_time = 0;
 }
 
 static void oplus_chg_fail_action(struct oplus_chg_chip *chip)
@@ -6568,14 +6573,14 @@ static void oplus_chg_update_ui_soc(struct oplus_chg_chip *chip)
 #ifndef CONFIG_OPLUS_CHARGER_MTK
 #ifndef WPC_NEW_INTERFACE
 	} else if ((chip->charger_exist || oplus_wireless_charge_start()) && chip->batt_exist && (CHARGING_STATUS_FAIL != chip->charging_state)
-				&& chip->mmi_chg && (chip->stop_chg == 1 || chip->charger_type == 5)) {
+				&& chip->mmi_chg && (chip->stop_chg == 1 || chip->charger_type == 5) && (chip->charger_type != POWER_SUPPLY_TYPE_UNKNOWN)) {
 #else
 	} else if ((chip->charger_exist || oplus_wpc_get_status()) && chip->batt_exist && (CHARGING_STATUS_FAIL != chip->charging_state)
-					&& chip->mmi_chg && (chip->stop_chg == 1 || chip->charger_type == 5)) {
+					&& chip->mmi_chg && (chip->stop_chg == 1 || chip->charger_type == 5) && (chip->charger_type != POWER_SUPPLY_TYPE_UNKNOWN)) {
 #endif
 #else
 	} else if (chip->charger_exist && chip->batt_exist && (CHARGING_STATUS_FAIL != chip->charging_state)
-					&& chip->mmi_chg && (chip->stop_chg == 1 || chip->charger_type == 5)) {
+					&& chip->mmi_chg && (chip->stop_chg == 1 || chip->charger_type == 5) && (chip->charger_type != POWER_SUPPLY_TYPE_UNKNOWN)) {
 #endif
 		chip->sleep_tm_sec = 0;
 		chip->prop_status = POWER_SUPPLY_STATUS_CHARGING;
@@ -8033,7 +8038,6 @@ static void oplus_chg_qc_config(struct oplus_chg_chip *chip)
 	if (!chip->chg_ops->set_qc_config || !chip->chg_ops->get_charger_subtype)
 		return;
 	if (chip->chg_ops->get_charger_subtype() != CHARGER_SUBTYPE_QC) {
-		//chg_err("....charger_type=%d\n", chip->charger_type);
 		qc_chging = false;
 		return;
 	}
@@ -9153,3 +9157,98 @@ bool opchg_get_vooc_start_fg(void)
 	}
 }
 
+struct oplus_chg_chip *oplus_chg_get_chg_struct(void)
+{
+	return g_charger_chip;
+}
+void oplus_chg_check_break(int vbus_rising)
+{
+	struct oplus_chg_chip *chip = g_charger_chip;
+	if (chip == NULL) {
+		chg_err("chip is NUL\n");
+		return;
+	}
+	if(vbus_rising == 1) {
+		chip->svooc_detect_time = local_clock() / 1000000;
+		oplus_chg_check_abnormal_adapter(vbus_rising);
+		if(((chip->svooc_detect_time - chip->svooc_detach_time) <= 1000) && oplus_vooc_get_detach_unexpectly()
+			&& chip->temperature <= 440 && chip->temperature >= 45) {
+			chip->detect_detach_unexpeactly = 1;
+			if(chip->svooc_disconnect_count < 3) {
+				chip->svooc_disconnect_count += 1;
+			}
+			chg_err("svooc_disconnect_count = %d\n", chip->svooc_disconnect_count);
+		} else if (((chip->svooc_detect_time - chip->svooc_detach_time) <= 100)) {
+			chip->detect_detach_unexpeactly = 2;
+		} else {
+			chip->svooc_disconnect_count = 0;
+		}
+		chg_err("svooc_detect_time = %d, chg->svooc_detach_time = %d\n",
+			chip->svooc_detect_time, chip->svooc_detach_time);
+		chip->svooc_detect_time = 0;
+		chip->svooc_detach_time = 0;
+	} else {
+		chip->svooc_detach_time = local_clock() / 1000000;
+		oplus_chg_check_abnormal_adapter(vbus_rising);
+		chg_err("svooc_detach_time = %d\n", chip->svooc_detach_time);
+	}
+	return;
+}
+static void oplus_chg_check_abnormal_adapter(int vbus_rising)
+{
+	struct oplus_chg_chip *chip = g_charger_chip;
+	static bool pre_is_abnormal_adapter = false;
+	static bool pre_pd_svooc = false;
+
+	if (!chip) {
+		return;
+	}
+
+	if (!chip->support_abnormal_adapter) {
+		return;
+	}
+
+	if (!vbus_rising) {
+		pre_pd_svooc = chip->pd_svooc;
+		pre_is_abnormal_adapter = chip->is_abnormal_adapter;
+		chip->is_abnormal_adapter = false;
+
+		if (!chip->mmi_chg
+				|| oplus_vooc_get_fastchg_to_warm()
+				|| oplus_vooc_get_fastchg_to_normal()
+				|| oplus_vooc_get_fastchg_dummy_started()
+				|| (oplus_vooc_get_adapter_update_status() == ADAPTER_FW_NEED_UPDATE)
+				|| oplus_vooc_get_btb_temp_over()
+				|| !oplus_vooc_get_fastchg_ing()
+				|| oplus_vooc_get_detach_unexpectly()) {
+			pre_is_abnormal_adapter = false;
+		}
+
+		if (pre_pd_svooc && pre_is_abnormal_adapter) {
+			chip->icon_debounce = true;
+		} else {
+			chip->icon_debounce = false;
+		}
+		chg_err("vbus_down [%d %d %d %d %d]\n",
+			pre_pd_svooc, pre_is_abnormal_adapter,
+			chip->mmi_chg, chip->icon_debounce,
+			chip->abnormal_adapter_dis_cnt);
+		return;
+	}
+
+	if (chip->mmi_chg
+			&& pre_pd_svooc
+			&& pre_is_abnormal_adapter
+			&& (oplus_vooc_get_detach_unexpectly() || oplus_vooc_get_fastchg_ing())
+			&& (chip->svooc_detect_time - chip->svooc_detach_time) <= 1500) {
+		chip->abnormal_adapter_dis_cnt++;
+	} else {
+		chip->abnormal_adapter_dis_cnt = 0;
+		chip->icon_debounce = false;
+	}
+
+	chg_err("vbus_up [%d %d %d %d %d]\n",
+		pre_pd_svooc, pre_is_abnormal_adapter,
+		chip->mmi_chg, chip->icon_debounce,
+		chip->abnormal_adapter_dis_cnt);
+}

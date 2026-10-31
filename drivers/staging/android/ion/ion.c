@@ -39,11 +39,11 @@
 #include "ion_secure_util.h"
 
 #if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO) && defined (CONFIG_OPPO_MEM_MONITOR)
-#include <linux/oppo_healthinfo/memory_monitor.h>
+#include <linux/healthinfo/memory_monitor.h>
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
 
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
-#include <linux/oppo_healthinfo/oppo_ion.h>
+#if defined(OPLUS_FEATURE_HEALTHINFO) || defined(CONFIG_OPPO_HEALTHINFO)
+#include <linux/healthinfo/ion.h>
 #endif
 
 static struct ion_device *internal_dev;
@@ -1072,11 +1072,17 @@ static const struct dma_buf_ops dma_buf_ops = {
 };
 
 #ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+pid_t alloc_svc_tgid;
+/* TODO use task comm may not safe. */
+static inline is_allocator_svc(struct task_struct *tsk)
+{
+	return (tsk->tgid == alloc_svc_tgid);
+}
 static inline unsigned int boost_pool_extra_flags(unsigned int heap_id_mask)
 {
 	unsigned int extra_flags = 0;
 
-	if (heap_id_mask & (1 << ION_CAMERA_HEAP_ID)) {
+	if (heap_id_mask & (1 << ION_CAMERA_HEAP_ID) ||  is_allocator_svc(current)) {
 		extra_flags |= ION_FLAG_CAMERA_BUFFER;
 	}
 	return extra_flags;

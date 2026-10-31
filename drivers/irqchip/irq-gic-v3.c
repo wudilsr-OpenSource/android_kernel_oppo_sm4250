@@ -44,12 +44,11 @@
 #include <linux/syscore_ops.h>
 
 #include "irq-gic-common.h"
+#if defined(OPLUS_FEATURE_POWERINFO_STANDBY) && defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
 /* add for wakelock profiler */
 #include "../../drivers/soc/oplus/oplus_wakelock/oplus_wakelock_profiler.h"
-//#ifdef OPLUS_FEATURE_NWPOWER
 #include <net/oplus_nwpower.h>
 //#endif /* OPLUS_FEATURE_NWPOWER */
-#ifdef OPLUS_FEATURE_POWERINFO_STANDBY
 //Add for: ipcc_x print
 atomic_t ipcc_first_msg = ATOMIC_INIT(0);
 #endif
@@ -407,12 +406,16 @@ static void gic_show_resume_irq(struct gic_chip_data *gic)
 		else if (desc->action && desc->action->name)
 			name = desc->action->name;
 
-		pr_warn("%s: %d triggered %s, hw_irq: %d \n", __func__, irq, name,desc->irq_data.hwirq);
+		pr_warn("%s: %d triggered %s\n", __func__, irq, name);
 		#if defined(OPLUS_FEATURE_POWERINFO_STANDBY) && defined(CONFIG_OPLUS_WAKELOCK_PROFILER)
 		/* add for wakelock profiler */
 		do {
 			int platform_id = get_cached_platform_id();
+
+			pr_info(" %s: %d triggered %s, %d\n", __func__, desc->irq_data.hwirq, name,platform_id);
+
 			if (platform_id == BENGAL) {
+
 			    if(desc->irq_data.hwirq == 100)
 				{
 					name = IRQ_NAME_MODEM_QMI;

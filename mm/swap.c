@@ -373,7 +373,7 @@ void mark_page_accessed(struct page *page)
 {
 	page = compound_head(page);
 	if (!PageActive(page) && !PageUnevictable(page) &&
-			PageReferenced(page)) {
+			(PageReferenced(page) || page_mapcount(page) > MAPCOUNT_HIGH_COUNTS)) {
 
 		/*
 		 * If the page is on the LRU, queue it for activation via

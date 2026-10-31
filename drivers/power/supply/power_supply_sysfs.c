@@ -288,7 +288,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(batt_vol),
 	POWER_SUPPLY_ATTR(batt_temp),
 	POWER_SUPPLY_ATTR(charge_technology),
-	POWER_SUPPLY_ATTR(fastcharger),
+	POWER_SUPPLY_ATTR(fast_charge),
 	POWER_SUPPLY_ATTR(mmi_charging_enable),
 	POWER_SUPPLY_ATTR(otg_switch),
 	POWER_SUPPLY_ATTR(otg_online),
@@ -572,7 +572,7 @@ static struct device_attribute power_supply_attrs[] = {
     POWER_SUPPLY_ATTR(batt_torch),
 #endif
 #ifdef OPLUS_FEATURE_CHG_BASIC
-    POWER_SUPPLY_ATTR(sub_current),
+    POWER_SUPPLY_ATTR(parallel_current_now),
     POWER_SUPPLY_ATTR(smb1355_test),
 #endif
 };

@@ -72,6 +72,7 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_MEM_AGING			= 0x2D,
 	//0x2E is SBLTEST FAIL, just happen in ddrtest fail when xbl setup
 //#endif
+	PON_RESTART_REASON_REBOOT_NO_VIBRATION		= 0x2F,
 	PON_RESTART_REASON_NORMAL			= 0x3E,
 #endif
 };

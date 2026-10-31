@@ -107,16 +107,19 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/task.h>
-#ifdef OPLUS_FEATURE_UIFIRST
-#include <linux/uifirst/uifirst_sched_fork.h>
-#endif /* OPLUS_FEATURE_UIFIRST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+#include <linux/sched_assist/sched_assist_fork.h>
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 #ifdef OPLUS_FEATURE_HEALTHINFO
 #ifdef CONFIG_OPPO_JANK_INFO
-#include <linux/oppo_healthinfo/oppo_jank_monitor.h>
+#include <linux/healthinfo/jank_monitor.h>
 #endif
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 
+#ifdef CONFIG_OPLUS_FEATURE_IM
+#include <linux/im/im.h>
+#endif
 /*
  * Minimum number of threads to boot the kernel
  */
@@ -2057,13 +2060,10 @@ static __latent_entropy struct task_struct *copy_process(
 	p->sequential_io_avg	= 0;
 #endif
 
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	init_task_ux_info(p);
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
-#ifdef CONFIG_OPLUS_FEATURE_FUSE_FS_SHORTCIRCUIT
-	p->fpack = NULL;
-#endif /* CONFIG_OPLUS_FEATURE_FUSE_FS_SHORTCIRCUIT */
 #ifdef OPLUS_FEATURE_HEALTHINFO
 #ifdef CONFIG_OPPO_JANK_INFO
 	p->jank_trace = 0;
@@ -2309,7 +2309,11 @@ static __latent_entropy struct task_struct *copy_process(
 	uprobe_copy_process(p, clone_flags);
 
 	copy_oom_score_adj(clone_flags, p);
-
+#ifdef CONFIG_OPLUS_FEATURE_IM
+	if (!IS_ERR(p)) {
+		im_tsk_init_flag((void *) p);
+	}
+#endif
 	return p;
 
 bad_fork_cancel_cgroup:

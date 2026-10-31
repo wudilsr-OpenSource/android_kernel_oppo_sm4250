@@ -174,7 +174,7 @@ struct request {
 	struct bio *biotail;
 
 	struct list_head queuelist;
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 	struct list_head ux_fg_bg_list;
 #endif
 	/*
@@ -352,7 +352,7 @@ struct blk_queue_tag {
 	unsigned long *tag_map;		/* bit map of free/busy tags */
 	int max_depth;			/* what we will send to device */
 	int real_max_depth;		/* what the array can hold */
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 	int bg_max_depth;		/* max depth for bg thread */
 #endif
 	atomic_t refcnt;		/* map can be shared */
@@ -448,7 +448,7 @@ struct request_queue {
 	 * Together with queue_head for cacheline sharing
 	 */
 	struct list_head	queue_head;
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 	struct list_head	ux_head;
 	struct list_head	fg_head;
 	struct list_head	bg_head;
@@ -584,7 +584,7 @@ struct request_queue {
 	struct blk_queue_tag	*queue_tags;
 
 	unsigned int		nr_sorted;
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
+#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPLUS_HEALTHINFO)
 // Modify for ioqueue
 	unsigned int		in_flight[5];
 #else
@@ -748,7 +748,7 @@ void blk_queue_flag_clear(unsigned int flag, struct request_queue *q);
 bool blk_queue_flag_test_and_set(unsigned int flag, struct request_queue *q);
 bool blk_queue_flag_test_and_clear(unsigned int flag, struct request_queue *q);
 
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 extern void ohm_ioqueue_add_inflight(struct request_queue *q,
                                             struct request *rq);
 extern void ohm_ioqueue_dec_inflight(struct request_queue *q,

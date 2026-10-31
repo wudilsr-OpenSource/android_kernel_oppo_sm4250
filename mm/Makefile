@@ -109,6 +109,8 @@ obj-$(CONFIG_PERCPU_STATS) += percpu-stats.o
 obj-$(CONFIG_HMM) += hmm.o
 obj-$(CONFIG_MEMFD_CREATE) += memfd.o
 obj-$(CONFIG_PROCESS_RECLAIM)	+= process_reclaim.o
+obj-$(CONFIG_DAMON) += damon/
+
 #if defined(OPLUS_FEATURE_MULTI_FREEAREA)
 obj-$(CONFIG_PHYSICAL_ANTI_FRAGMENTATION) += multi_freearea.o
 #endif
@@ -121,10 +123,11 @@ obj-$(CONFIG_VIRTUAL_RESERVE_MEMORY) += reserve_area.o
 #endif
 
 #ifdef OPLUS_FEATURE_HEALTHINFO
-obj-y += oppo_healthinfo/
+#obj-y += healthinfo/
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
 
 #if defined(OPLUS_FEATURE_MEMLEAK_DETECT)
 #/* collect all tasks memory info */
 obj-$(CONFIG_DUMP_TASKS_MEM) += task_mem/
 #endif /* defined(OPLUS_FEATURE_MEMLEAK_DETECT) */
+obj-y += kshrink_slabd.o

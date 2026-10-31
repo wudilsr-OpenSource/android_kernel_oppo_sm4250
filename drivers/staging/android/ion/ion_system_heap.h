@@ -38,7 +38,7 @@ struct ion_system_heap {
 	/* Prevents unnecessary page splitting */
 	struct mutex split_page_mutex;
 #ifdef CONFIG_OPLUS_ION_BOOSTPOOL
-	struct ion_boost_pool *gr_pool, *cam_pool;
+	struct ion_boost_pool *gr_pool, *cam_pool, *uncached_boost_pool;
 #endif /* CONFIG_OPLUS_ION_BOOSTPOOL */
 };
 
@@ -47,6 +47,9 @@ struct page_info {
 	bool from_pool;
 	unsigned int order;
 	struct list_head list;
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+	bool from_boost_kmem_cache;
+#endif
 };
 
 int order_to_index(unsigned int order);

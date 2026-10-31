@@ -39,7 +39,9 @@
 void page_writeback_init(void);
 
 vm_fault_t do_swap_page(struct vm_fault *vmf);
-
+extern bool wakeup_shrink_slabd(gfp_t gfp_mask, int nid,
+				 struct mem_cgroup *memcg,
+				 int priority, struct reclaim_state *reclaim_state);
 #ifdef CONFIG_SPECULATIVE_PAGE_FAULT
 extern struct vm_area_struct *get_vma(struct mm_struct *mm,
 				      unsigned long addr);
@@ -574,4 +576,6 @@ static inline bool is_migrate_highatomic_page(struct page *page)
 
 void setup_zone_pageset(struct zone *zone);
 extern struct page *alloc_new_node_page(struct page *page, unsigned long node);
+#define MAPPED_LRU_MAPCOUNTS (20)
+#define MAPCOUNT_HIGH_COUNTS (10)
 #endif	/* __MM_INTERNAL_H */

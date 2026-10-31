@@ -54,6 +54,9 @@
 #include "../oplus_gauge.h"
 #include "../oplus_vooc.h"
 #include "oplus_bq27541.h"
+#include "../oplus_debug_info.h"
+#include "../oplus_wireless.h"
+
 
 #define GUAGE_ERROR -1
 #define GUAGE_OK 0
@@ -1775,8 +1778,10 @@ static int seal(void)
 		}
 		usleep_range(10000, 10000);
 	}
+	oplus_chg_gauge_seal_unseal_fail(OPLUS_GAUGE_SEAL_FAIL);
 	return 0;
 }
+
 
 static int unseal(u32 key)
 {
@@ -1819,6 +1824,7 @@ out:
 
 	if (i == SEAL_POLLING_RETRY_LIMIT) {
 		pr_err("bq27541 failed\n");
+		oplus_chg_gauge_seal_unseal_fail(OPLUS_GAUGE_UNSEAL_FAIL);
 		return 0;
 	} else {
 		return 1;
@@ -2432,8 +2438,7 @@ static int bq27411_modify_soc_smooth_parameter
 
 	if (chip->modify_soc_smooth == false
 			|| chip->device_type == DEVICE_BQ27541
-			|| chip->device_type == DEVICE_ZY0602
-			|| chip->device_type == DEVICE_BQ27541) {
+			|| chip->device_type == DEVICE_ZY0602) {
 		return GUAGE_ERROR;
 	}
 	pr_err("%s begin\n", __func__);
@@ -2507,6 +2512,7 @@ static int bq8z610_seal(void)
 		//bq27541_i2c_txsubcmd(0, BQ28Z610_SEAL_SUBCMD);
 		usleep_range(10000, 10000);
 	}
+	oplus_chg_gauge_seal_unseal_fail(OPLUS_GAUGE_SEAL_FAIL);
 	return 0;
 }
 
@@ -2535,6 +2541,7 @@ out:
 	chg_debug("bq8z610 : i=%d\n", i);
 	if (i == BQ28Z610_SEAL_POLLING_RETRY_LIMIT) {
 		pr_err("bq8z610 unseal failed\n");
+		oplus_chg_gauge_seal_unseal_fail(OPLUS_GAUGE_UNSEAL_FAIL);
 		return 0;
 	} else {
 		return 1;

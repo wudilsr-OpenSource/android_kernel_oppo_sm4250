@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __SYNX_PRIVATE_H__
@@ -154,7 +154,20 @@ struct synx_table_row {
 };
 
 /**
- * struct synx_registered_ops - External sync clients registered for bind
+ * struct synx_handle_entry - Entry saved in the IDR handle table
+ *
+ * @row      : Pointer to synx object
+ * @synx_obj : Synx unique ID
+ * @refcount : Reference count
+ */
+struct synx_handle_entry {
+	struct synx_table_row *row;
+	s32 synx_obj;
+	struct kref refcount;
+};
+
+/**
+* struct synx_registered_ops - External sync clients registered for bind
  * operations with synx driver
  *
  * @valid : Validity of the client registered bind ops

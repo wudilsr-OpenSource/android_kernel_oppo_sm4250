@@ -30,7 +30,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/wbt.h>
 
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 extern bool sysctl_wbt_enable;
 #endif
 static inline void wbt_clear_state(struct request *rq)
@@ -79,7 +79,7 @@ enum {
 
 static inline bool rwb_enabled(struct rq_wb *rwb)
 {
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 	return sysctl_wbt_enable && rwb && rwb->wb_normal != 0;
 #else
 	return rwb && rwb->wb_normal != 0;
@@ -188,7 +188,7 @@ static void __wbt_done(struct rq_qos *rqos, enum wbt_flags wb_acct)
  * Called on completion of a request. Note that it's also called when
  * a request is merged, when the request gets freed.
  */
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 static void wbt_done(struct rq_qos *rqos, struct request *rq, bool fgux)
 #else
 static void wbt_done(struct rq_qos *rqos, struct request *rq)
@@ -202,7 +202,7 @@ static void wbt_done(struct rq_qos *rqos, struct request *rq)
 			rwb->sync_cookie = NULL;
 		}
 
-#if defined(OPLUS_FEATURE_UIFIRST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_UXIO_FIRST)
 		if (wbt_is_read(rq) || fgux)
 #else
 		if (wbt_is_read(rq))

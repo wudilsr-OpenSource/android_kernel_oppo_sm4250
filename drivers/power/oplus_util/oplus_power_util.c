@@ -14,7 +14,7 @@
 #include <linux/jiffies.h>
 #include <linux/suspend.h>
 #include "oplus_power_util.h"
-#include "../../input/oppo_secure_common/include/oppo_secure_common.h"
+#include "../../../../../vendor/oplus/secure/common/bsp/drivers/include/oplus_secure_common.h"
 struct oplus_util oplus_util;
 static int polling_time = 60000;
 module_param_named(polling_time, polling_time, int, S_IRUGO|S_IWUSR);
@@ -29,11 +29,11 @@ ssize_t get_active_wakelocks(char *buf)
 
 void oplus_get_rpm_stats(void)
 {
-	extern secure_type_t get_secureType(void);
+//	extern secure_type_t get_secureType(void);
 
-	pr_info("get_secureType(): %d", get_secureType());
-	if (get_secureType() == 3)
-		return;    
+//	pr_info("get_secureType(): %d", get_secureType());
+//	if (get_secureType() == 3)
+//		return;    
 
 #ifdef CONFIG_QTI_RPM_STATS_LOG
 	oplus_get_rpm_master_stats(oplus_util.rpm_buf, RPM_BUFFER_SIZE);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2002,2007-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <asm/cacheflush.h>
@@ -171,18 +172,7 @@ imported_mem_show(struct kgsl_process_private *priv,
 			}
 		}
 
-		/*
-		 * If refcount on mem entry is the last refcount, we will
-		 * call kgsl_mem_entry_destroy and detach it from process
-		 * list. When there is no refcount on the process private,
-		 * we will call kgsl_destroy_process_private to do cleanup.
-		 * During cleanup, we will try to remove the same sysfs
-		 * node which is in use by the current thread and this
-		 * situation will end up in a deadloack.
-		 * To avoid this situation, use a worker to put the refcount
-		 * on mem entry.
-		 */
-		kgsl_mem_entry_put_deferred(entry);
+		kgsl_mem_entry_put(entry);
 		spin_lock(&priv->mem_lock);
 	}
 	spin_unlock(&priv->mem_lock);
@@ -346,7 +336,7 @@ void kgsl_process_init_sysfs(struct kgsl_device *device,
 	kgsl_reclaim_proc_sysfs_init(private);
 }
 
-#if defined(OPLUS_FEATURE_HEALTHINFO) && defined(CONFIG_OPPO_HEALTHINFO)
+#if defined(OPLUS_FEATURE_HEALTHINFO) || defined(CONFIG_OPPO_HEALTHINFO)
 unsigned long gpu_total(void)
 {
 	return (unsigned long)atomic_long_read(&kgsl_driver.stats.page_alloc);
@@ -608,6 +598,9 @@ static int kgsl_unlock_sgt(struct sg_table *sgt)
 
 static void kgsl_page_alloc_free(struct kgsl_memdesc *memdesc)
 {
+	if (memdesc->priv & KGSL_MEMDESC_MAPPED)
+		return;
+
 	kgsl_page_alloc_unmap_kernel(memdesc);
 	/* we certainly do not expect the hostptr to still be mapped */
 	BUG_ON(memdesc->hostptr);
@@ -707,6 +700,9 @@ static int kgsl_contiguous_vmfault(struct kgsl_memdesc *memdesc,
 static void kgsl_cma_coherent_free(struct kgsl_memdesc *memdesc)
 {
 	unsigned long attrs = 0;
+
+	if (memdesc->priv & KGSL_MEMDESC_MAPPED)
+		return;
 
 	if (memdesc->hostptr) {
 		if (memdesc->priv & KGSL_MEMDESC_SECURE) {
@@ -1254,7 +1250,8 @@ void kgsl_sharedmem_free(struct kgsl_memdesc *memdesc)
 
 	if (memdesc->sgt) {
 		sg_free_table(memdesc->sgt);
-		kvfree(memdesc->sgt);
+		kfree(memdesc->sgt);
+		memdesc->sgt = NULL;
 	}
 
 	memdesc->page_count = 0;

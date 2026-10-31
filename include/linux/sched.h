@@ -32,7 +32,7 @@
 
 #ifdef OPLUS_FEATURE_HEALTHINFO
 #ifdef CONFIG_OPPO_JANK_INFO
-#include <linux/oppo_healthinfo/oppo_jank_monitor.h>
+#include <linux/healthinfo/jank_monitor.h>
 #endif
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 
@@ -232,18 +232,17 @@ enum fps {
 
 #endif
 
-#ifdef OPLUS_FEATURE_UIFIRST
-extern int sysctl_uifirst_enabled;
-extern int sysctl_launcher_boost_enabled;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+extern int sysctl_sched_assist_enabled;
+extern int sysctl_sched_assist_scene;
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+extern int sysctl_cpu_multi_thread;
+#endif
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 extern int sysctl_slide_boost_enabled;
 extern int sysctl_boost_task_threshold;
-extern int sysctl_animation_type;
-#define LAUNCHER_SI_START (4)
-#define LAUNCHER_SI_EXIT (5)
-#ifdef CONFIG_CAMERA_OPT
-extern int sysctl_camera_opt_enabled;
-#endif
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
 
 /* Task command name length: */
 #define TASK_COMM_LEN			16
@@ -1513,17 +1512,25 @@ struct task_struct {
 	/* Used by LSM modules for access restriction: */
 	void				*security;
 #endif
-#ifdef OPLUS_FEATURE_UIFIRST
-	int static_ux;
-	atomic64_t dynamic_ux;
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
+	int ux_state;
+	atomic64_t inherit_ux;
 	struct list_head ux_entry;
 	int ux_depth;
 	u64 enqueue_time;
-	u64 dynamic_ux_start;
-#ifdef CONFIG_CAMERA_OPT
-	int camera_opt;
+	u64 inherit_ux_start;
+#ifdef CONFIG_OPLUS_FEATURE_SCHED_SPREAD
+        int lb_state;
+        int ld_flag;
 #endif
-#endif /* OPLUS_FEATURE_UIFIRST */
+#endif /* OPLUS_FEATURE_SCHED_ASSIST */
+#ifdef CONFIG_MMAP_LOCK_OPT
+//#ifdef CONFIG_UXCHAIN_V2
+	int ux_once;
+	u64 get_mmlock_ts;
+	int get_mmlock;
+#endif
+
 #ifdef OPLUS_FEATURE_HEALTHINFO
 #ifdef CONFIG_OPPO_JANK_INFO
 	int jank_trace;
@@ -1538,6 +1545,9 @@ struct task_struct {
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 	/* task is frozen/stopped (used by the cgroup freezer) */
 	ANDROID_KABI_USE(1, unsigned frozen:1);
+#ifdef CONFIG_OPLUS_FEATURE_IM
+	int im_flag;
+#endif
 
 	/*
 	 * New fields for task_struct should be added above here, so that
@@ -1545,9 +1555,6 @@ struct task_struct {
 	 */
 	randomized_struct_fields_end
 
-#ifdef CONFIG_OPLUS_FEATURE_FUSE_FS_SHORTCIRCUIT
-	struct fuse_package *fpack;
-#endif /* CONFIG_OPLUS_FEATURE_FUSE_FS_SHORTCIRCUIT */
 	/* CPU-specific state of this task: */
 	struct thread_struct		thread;
 
@@ -1559,13 +1566,6 @@ struct task_struct {
 	 */
 };
 
-#ifdef CONFIG_OPLUS_FEATURE_FUSE_FS_SHORTCIRCUIT
-struct fuse_package {
-	bool fuse_open_req;
-	struct file *filp;
-	char *iname;
-};
-#endif /* CONFIG_OPLUS_FEATURE_FUSE_FS_SHORTCIRCUIT */
 
 static inline struct pid *task_pid(struct task_struct *task)
 {
@@ -1972,16 +1972,17 @@ extern void kick_process(struct task_struct *tsk);
 #else
 static inline void kick_process(struct task_struct *tsk) { }
 #endif
-#ifdef CONFIG_CAMERA_OPT
-extern void set_camera_opt(struct task_struct *tsk);
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+extern pid_t alloc_svc_tgid;
 #endif
-extern void __set_task_comm(struct task_struct *tsk, const char *from, bool exec);
 
+extern void __set_task_comm(struct task_struct *tsk, const char *from, bool exec);
 static inline void set_task_comm(struct task_struct *tsk, const char *from)
 {
 	__set_task_comm(tsk, from, false);
-#ifdef CONFIG_CAMERA_OPT
-	set_camera_opt(tsk);
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+	if (!strncmp(from, "allocator-servi", TASK_COMM_LEN))
+		alloc_svc_tgid = tsk->tgid;
 #endif
 }
 

@@ -18,7 +18,7 @@
 #include <linux/mm.h>
 #include <linux/of.h>
 #include <linux/uaccess.h>
-#include "../../input/oppo_secure_common/include/oppo_secure_common.h"
+#include "../../../../../vendor/oplus/secure/common/bsp/drivers/include/oplus_secure_common.h"
 
 #define RPM_MASTERS_BUF_LEN 400
 
@@ -145,7 +145,7 @@ exit0:
 static ssize_t oplus_msm_rpmh_master_stats_show(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf)
 {
-    extern secure_type_t get_secureType(void);
+   extern secure_type_t get_secureType(void);
 
 	pr_info("get_secureType(): %d", get_secureType());
 	if (get_secureType() == 3)

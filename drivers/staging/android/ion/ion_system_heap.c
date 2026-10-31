@@ -28,6 +28,7 @@
 #ifdef CONFIG_OPLUS_ION_BOOSTPOOL
 #include "oplus_ion_boost_pool.h"
 #include <linux/proc_fs.h>
+#include <linux/sizes.h>
 #endif /* CONFIG_OPLUS_ION_BOOSTPOOL */
 
 static gfp_t high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO | __GFP_NOWARN |
@@ -50,8 +51,14 @@ static struct ion_boost_pool *has_boost_pool(struct ion_system_heap *sys_heap,
 	    (buffer->private_flags & ION_PRIV_FLAG_SHRINKER_FREE))
 		return NULL;
 
-	if (buffer->flags & ION_FLAG_CAMERA_BUFFER)
-		return sys_heap->cam_pool;
+	if (buffer->flags & ION_FLAG_CAMERA_BUFFER) {
+		int cached = (int)ion_buffer_cached(buffer);
+
+		if (cached)
+			return sys_heap->cam_pool;
+		else
+			return sys_heap->uncached_boost_pool;
+	}
 
 	return NULL;
 }
@@ -174,10 +181,23 @@ static struct page_info *alloc_largest_available(struct ion_system_heap *heap,
 	struct page_info *info;
 	int i;
 	bool from_pool;
-
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+	if (likely(create_kmemcache_ion_info_success)) {
+		info = kmem_cache_zalloc(boost_ion_info_cachep, GFP_KERNEL);
+		if (!info)
+			return ERR_PTR(-ENOMEM);
+		info->from_boost_kmem_cache = true;
+	} else {
+		info = kmalloc(sizeof(*info), GFP_KERNEL);
+		if (!info)
+			return ERR_PTR(-ENOMEM);
+		info->from_boost_kmem_cache = false;
+	}
+#else
 	info = kmalloc(sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return ERR_PTR(-ENOMEM);
+#endif
 
 	for (i = 0; i < NUM_ORDERS; i++) {
 		if (size < order_to_size(orders[i]))
@@ -212,10 +232,23 @@ alloc_from_pool_preferred(struct ion_system_heap *heap,
 
 	if (buffer->flags & ION_FLAG_POOL_FORCE_ALLOC)
 		goto force_alloc;
-
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+	if (likely(create_kmemcache_ion_info_success)) {
+		info = kmem_cache_zalloc(boost_ion_info_cachep, GFP_KERNEL);
+		if (!info)
+			return ERR_PTR(-ENOMEM);
+		info->from_boost_kmem_cache = true;
+	} else {
+		info = kmalloc(sizeof(*info), GFP_KERNEL);
+		if (!info)
+			return ERR_PTR(-ENOMEM);
+		info->from_boost_kmem_cache = false;
+	}
+#else
 	info = kmalloc(sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return ERR_PTR(-ENOMEM);
+#endif
 
 	for (i = 0; i < NUM_ORDERS; i++) {
 		if (size < order_to_size(orders[i]))
@@ -355,7 +388,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	INIT_LIST_HEAD(&pages_from_pool);
 
 #ifdef CONFIG_OPLUS_ION_BOOSTPOOL
-	if (size < SZ_1M)
+	if (size < SZ_64K)
 		boost_pool = NULL;
 
 	if (boost_pool) {
@@ -502,10 +535,6 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	if (nents_sync)
 		sg_free_table(&table_sync);
 	ion_heap_free_pages_mem(&data);
-#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
-	if (boost_pool)
-		boost_pool_wakeup_process(boost_pool);
-#endif /* CONFIG_OPLUS_ION_BOOSTPOOL */
 	return 0;
 
 err_free_sg2:
@@ -531,11 +560,25 @@ err_free_data_pages:
 err:
 	list_for_each_entry_safe(info, tmp_info, &pages, list) {
 		free_buffer_page(sys_heap, buffer, info->page, info->order);
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+		if (likely(info->from_boost_kmem_cache))
+			kmem_cache_free(boost_ion_info_cachep, info);
+		else
+			kfree(info);
+#else
 		kfree(info);
+#endif
 	}
 	list_for_each_entry_safe(info, tmp_info, &pages_from_pool, list) {
 		free_buffer_page(sys_heap, buffer, info->page, info->order);
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+		if (likely(info->from_boost_kmem_cache))
+			kmem_cache_free(boost_ion_info_cachep, info);
+		else
+			kfree(info);
+#else
 		kfree(info);
+#endif
 	}
 	return ret;
 }
@@ -596,6 +639,12 @@ static int ion_system_heap_shrink(struct ion_heap *heap, gfp_t gfp_mask,
 							  gfp_mask,
 							  nr_to_scan);
 		}
+		if (sys_heap->uncached_boost_pool) {
+			boost_pool = sys_heap->uncached_boost_pool;
+			nr_freed += boost_pool_shrink(boost_pool,
+			boost_pool->pools[i],gfp_mask,nr_to_scan);
+		}
+
 		if (sys_heap->cam_pool) {
 			boost_pool = sys_heap->cam_pool;
 			nr_freed += boost_pool_shrink(boost_pool,
@@ -834,6 +883,13 @@ static struct task_struct *ion_create_kworker(struct ion_page_pool **pools,
 	return thread;
 }
 
+#ifdef CONFIG_OPLUS_ION_BOOSTPOOL
+static void init_once(void *foo)
+{
+	;
+}
+#endif
+
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *data)
 {
 	struct ion_system_heap *heap;
@@ -892,7 +948,24 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *data)
 			if (!heap->cam_pool)
 				pr_err("%s: create boost_pool camera failed!\n",
 				       __func__);
+			if (totalram_pages > (SZ_4G >> PAGE_SHIFT))
+				heap->uncached_boost_pool = boost_pool_create(heap, 0,
+								48 * 256, boost_root_dir,
+								"uncached");
+			else
+				heap->uncached_boost_pool = boost_pool_create(heap, 0,
+								32 * 256, boost_root_dir,
+								"uncached");
+			if (!heap->uncached_boost_pool)
+				pr_err("%s: create boost_pool camera failed!\n",
+				       __func__);
 		}
+		boost_ion_info_cachep = kmem_cache_create("boost_ion_info_cachep",
+			sizeof(struct page_info), 0,0, init_once);
+		if (boost_ion_info_cachep != NULL)
+			create_kmemcache_ion_info_success = true;
+		else
+			pr_err("boost_ion_info_cachep create failed\n");
 	} else {
 		pr_err("boostpool kcrit_scene init failed.\n");
 	}

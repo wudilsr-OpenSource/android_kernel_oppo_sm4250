@@ -16,10 +16,10 @@
 #include <linux/input.h>
 #include <linux/serio.h>
 #include <linux/regulator/consumer.h>
-#include "oppo_touchscreen/tp_devices.h"
-#include "oppo_touchscreen/touchpanel_common.h"
-#include <soc/oppo/oppo_project.h>
-#include <soc/oppo/device_info.h>
+#include "oplus_touchscreen/tp_devices.h"
+#include "oplus_touchscreen/touchpanel_common.h"
+#include <soc/oplus/oplus_project.h>
+#include <soc/oplus/device_info.h>
 #include "touch.h"
 
 #define MAX_LIMIT_DATA_LENGTH         100
@@ -56,12 +56,10 @@ bool  tp_judge_ic_match_commandline(struct panel_info *panel_data)
     int i = 0;
     prj_id = get_project();
     pr_err("[TP] boot_command_line = %s \n", saved_command_line);
-	pr_err("[TP] prj_id = [%d],panel_data->project_num = [%d]\n", prj_id, panel_data->project_num);
     for(i = 0; i<panel_data->project_num; i++){
         if(prj_id == panel_data->platform_support_project[i]){
             g_tp_prj_id = panel_data->platform_support_project_dir[i];
             g_tp_ext_prj_name = panel_data->platform_support_external_name[i];
-			pr_err("[TP] platform_support_commandline = %s \n", panel_data->platform_support_commandline[i]);
             if(strstr(saved_command_line, panel_data->platform_support_commandline[i])||strstr("default_commandline", panel_data->platform_support_commandline[i]) ){
                 pr_err("[TP] Driver match the project\n");
                 return true;
@@ -111,8 +109,8 @@ int tp_util_get_vendor(struct hw_resource *hw_res, struct panel_info *panel_data
     }
 
         if ((prj_id == 20221) || (prj_id == 20222) || (prj_id == 20223) || (prj_id == 20224) || (prj_id == 20225) || (prj_id == 20226)
-		|| (prj_id == 20227) || (prj_id == 20228) || (prj_id == 20229) || (prj_id == 20021) || (prj_id == 20202) || (prj_id == 20203)
-		|| (prj_id == 20204) || (prj_id == 20207) || (prj_id == 20208) || (prj_id == 20025)) {
+	|| (prj_id == 20227) || (prj_id == 20228) || (prj_id == 20229) || (prj_id == 20021) || (prj_id == 20202) || (prj_id == 20203)
+	|| (prj_id == 20204) || (prj_id == 20207) || (prj_id == 20208) || (prj_id == 20025)) {
                 pr_err("[TP]project is soda\n");
                 pr_err("[TP] saved_command_line = [%s] \n", saved_command_line);
                 if (strstr(saved_command_line, "mdss_dsi_ili9881h_90hz_boe_video")) {
@@ -184,15 +182,15 @@ int tp_util_get_vendor(struct hw_resource *hw_res, struct panel_info *panel_data
                 }
         }
 
-		if ((prj_id == 20211) || (prj_id == 20212) || (prj_id == 20213) || (prj_id == 20214) || (prj_id == 20215)) {
-                pr_err("[TP]project is rum\n");
-                snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/20211/FW_GT9886_SAMSUNG.bin");
-                if (panel_data->test_limit_name) {
-					snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/20211/LIMIT_GT9886_SAMSUNG.img");
-                }
-                panel_data->vid_len = 7;
-                memcpy(panel_data->manufacture_info.version, "FA218ON", 7);
-        }
+	if ((prj_id == 20211) || (prj_id == 20212) || (prj_id == 20213) || (prj_id == 20214) || (prj_id == 20215)) {
+		pr_err("[TP]project is rum\n");
+		snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/20211/FW_GT9886_SAMSUNG.bin");
+		if (panel_data->test_limit_name) {
+			snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/20211/LIMIT_GT9886_SAMSUNG.img");
+		}
+		panel_data->vid_len = 7;
+		memcpy(panel_data->manufacture_info.version, "FA218ON", 7);
+	}
 
         if ((prj_id == 20673) || (prj_id == 20674) || (prj_id == 20675) || (prj_id == 20677) || (prj_id == 0x2067D) || (prj_id == 0x2067E)) {
                 printk("project is coco\n");
@@ -261,59 +259,6 @@ int tp_util_get_vendor(struct hw_resource *hw_res, struct panel_info *panel_data
                         memcpy(panel_data->manufacture_info.version, "RA378BI_", 8);
                         panel_data->firmware_headfile.firmware_data = FW_20673_ILI9881H_BOE;
                         panel_data->firmware_headfile.firmware_size = sizeof(FW_20673_ILI9881H_BOE);
-                }
-        }
-        if ((prj_id == 0x206BD) || (prj_id == 0x206BE) || (prj_id == 0x206BF) || (prj_id == 0x206C0) ||
-	        (prj_id == 0x206C1) || (prj_id == 0x206C2) || (prj_id == 0x206C3)) {
-                printk("project is pascal-h\n");
-                if (strstr(saved_command_line, "mdss_dsi_nt36525b_hlt_b3_video")) {
-                        snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/206BD/FW_NF_NT36525B_BOE_B3.bin");
-                        if (panel_data->test_limit_name) {
-                                snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/206BD/LIMIT_NF_NT36525B_BOE_B3.img");
-                        }
-                        memcpy(panel_data->manufacture_info.version, "RA511_HLT_B3_NT_", 16);
-                        panel_data->firmware_headfile.firmware_data = FW_206BD_NT36525B_BOE_B3;
-                        panel_data->firmware_headfile.firmware_size = sizeof(FW_206BD_NT36525B_BOE_B3);
-                } else if (strstr(saved_command_line, "mdss_dsi_nt36525b_hlt_b8_video")) {
-                        snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/206BD/FW_NF_NT36525B_BOE_B8.bin");
-                        if (panel_data->test_limit_name) {
-                                snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/206BD/LIMIT_NF_NT36525B_BOE_B8.img");
-                        }
-                        memcpy(panel_data->manufacture_info.version, "RA511_HLT_B8_NT_", 16);
-                        panel_data->firmware_headfile.firmware_data = FW_206BD_NT36525B_BOE_B8;
-                        panel_data->firmware_headfile.firmware_size = sizeof(FW_206BD_NT36525B_BOE_B8);
-                } else if (strstr(saved_command_line, "mdss_dsi_ili9882n_cdot_video")) {
-                        snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/206BD/FW_NF_ILI9882N_CDOT.bin");
-                        if (panel_data->test_limit_name) {
-                                snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/206BD/LIMIT_NF_ILI9882N_CDOT.ini");
-                        }
-                        memcpy(panel_data->manufacture_info.version, "RA511_CDO_AU_IL_", 16);
-                        panel_data->firmware_headfile.firmware_data = FW_206BD_ILI9882N_CDOT;
-                        panel_data->firmware_headfile.firmware_size = sizeof(FW_206BD_ILI9882N_CDOT);
-                } else if (strstr(saved_command_line, "mdss_dsi_ili9882n_truly_25_video")) {
-                        snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/206BD/FW_NF_ILI9882N_TRULY.bin");
-                        if (panel_data->test_limit_name) {
-                                snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/206BD/LIMIT_NF_ILI9882N_TRULY.ini");
-                        }
-                        memcpy(panel_data->manufacture_info.version, "RA511_TRU_25_IL_", 16);
-                        panel_data->firmware_headfile.firmware_data = FW_206BD_NT36525B_TRULY;
-                        panel_data->firmware_headfile.firmware_size = sizeof(FW_206BD_NT36525B_TRULY);
-                } else if (strstr(saved_command_line, "mdss_dsi_ili9882n_truly_26_video")) {
-                        snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/206BD/FW_NF_ILI9882N_TRULY.bin");
-                        if (panel_data->test_limit_name) {
-                                snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/206BD/LIMIT_NF_ILI9882N_TRULY.ini");
-                        }
-                        memcpy(panel_data->manufacture_info.version, "RA511_TRU_26_IL_", 16);
-                        panel_data->firmware_headfile.firmware_data = FW_206BD_NT36525B_TRULY;
-                        panel_data->firmware_headfile.firmware_size = sizeof(FW_206BD_NT36525B_TRULY);
-                } else if (strstr(saved_command_line, "mdss_dsi_nt36525b_inx_video")) {
-                        snprintf(panel_data->fw_name, MAX_FW_NAME_LENGTH, "tp/206BD/FW_NF_NT36525B_INNOLUX.bin");
-                        if (panel_data->test_limit_name) {
-                                snprintf(panel_data->test_limit_name, MAX_LIMIT_DATA_LENGTH, "tp/206BD/LIMIT_NF_NT36525B_INNOLUX.img");
-                        }
-                        memcpy(panel_data->manufacture_info.version, "RA511_INX_T2_NT_", 16);
-                        panel_data->firmware_headfile.firmware_data = FW_206BD_NT36525B_INNOLUX;
-                        panel_data->firmware_headfile.firmware_size = sizeof(FW_206BD_NT36525B_INNOLUX);
                 }
         }
 

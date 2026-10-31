@@ -37,7 +37,7 @@ source "drivers/soc/oplus/system/Kconfig"
 source "drivers/soc/oplus/sensor/Kconfig"
 #endif /* OPLUS_FEATURE_SENSOR_SMEM */
 #ifdef OPLUS_FEATURE_HEALTHINFO
-source "drivers/soc/oplus/oppo_healthinfo/Kconfig"
+source "drivers/soc/oplus/healthinfo/Kconfig"
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 
 #Add for NandSwap
@@ -50,4 +50,8 @@ source "drivers/soc/oplus/svelte/Kconfig"
 source "drivers/soc/oplus/lowmem_dbg/Kconfig"
 #endif /* OPLUS_FEATURE_LOWMEM_DBG */
 
+#ifdef OPLUS_FEATURE_IM
+#ted.lin@optimization add for im module
+source "drivers/soc/oplus/im/Kconfig"
+#endif /* OPLUS_FEATURE_IM */
 endmenu

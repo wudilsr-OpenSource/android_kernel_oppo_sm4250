@@ -36,10 +36,6 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_pil_event.h>
 
-#ifdef OPLUS_FEATURE_SSR
-#include <soc/oplus/system/oplus_mm_kevent_fb.h>
-#endif /* OPLUS_FEATURE_SSR */
-
 #include "peripheral-loader.h"
 
 #define pil_err(desc, fmt, ...)						\
@@ -417,26 +413,6 @@ setup_fail:
 	return ret;
 }
 
-#ifdef OPLUS_FEATURE_SSR
-#define CAUSENAME_SIZE 128
-unsigned int BKDRHash(char* str, unsigned int len)
-{
-	unsigned int seed = 131; /* 31 131 1313 13131 131313 etc.. */
-	unsigned int hash = 0;
-	unsigned int i    = 0;
-
-	if (str == NULL) {
-		return 0;
-	}
-
-	for(i = 0; i < len; str++, i++) {
-		hash = (hash * seed) + (*str);
-	}
-
-	return hash;
-}
-#endif /*OPLUS_FEATURE_SSR*/
-
 /**
  * print_aux_minidump_tocs() - Print the ToC for an auxiliary minidump entry
  * @desc: PIL descriptor for the subsystem for which minidump is collected
@@ -509,12 +485,6 @@ int pil_do_ramdump(struct pil_desc *desc,
 	struct pil_seg *seg;
 	int count = 0, ret;
 
-#ifdef OPLUS_FEATURE_SSR
-	unsigned char payload[100] = "";
-	unsigned int hashid;
-	char strHashSource[CAUSENAME_SIZE];
-#endif /*OPLUS_FEATURE_SSR*/
-
 	if (desc->minidump_ss) {
 #ifdef OPLUS_FEATURE_MODEM_MINIDUMP
 	//Add for customized subsystem ramdump to skip generate dump cause by SAU
@@ -525,20 +495,6 @@ int pil_do_ramdump(struct pil_desc *desc,
 		return -1;
 	}
 #endif
-
-#ifdef OPLUS_FEATURE_SSR
-	if(strlen(desc->name) > 0 && (strncmp(desc->name,"adsp",strlen(desc->name)) == 0)) {
-		strncpy(strHashSource,desc->name,strlen(desc->name));
-		hashid = BKDRHash(strHashSource,strlen(strHashSource));
-		scnprintf(payload, sizeof(payload), "payload@@%s$$fid@@%u", desc->name, hashid);
-		upload_mm_fb_kevent_to_atlas_limit(OPLUS_AUDIO_EVENTID_ADSP_CRASH, payload, OPLUS_FB_ADSP_CRASH_RATELIMIT);
-
-		if(desc->dev){
-			__adsp_send_uevent(desc->dev, payload);
-		}
-	}
-#endif /* OPLUS_FEATURE_SSR */
-
 		pr_debug("Minidump : md_ss_toc->md_ss_toc_init is 0x%x\n",
 			(unsigned int)desc->minidump_ss->md_ss_toc_init);
 		pr_debug("Minidump : md_ss_toc->md_ss_enable_status is 0x%x\n",

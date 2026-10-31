@@ -651,7 +651,7 @@ static void p922x_reset_variables(struct oplus_p922x_ic *chip)
 	chip->p922x_chg_status.dock_version = 0;
 	chip->p922x_chg_status.charge_voltage = 0;
 	chip->p922x_chg_status.charge_current = 0;
-	chip->p922x_chg_status.CEP_ready = false;
+	chip->p922x_chg_status.cep_ready = false;
 	chip->p922x_chg_status.vrect = 0;
 	chip->p922x_chg_status.vout = 0;
 	chip->p922x_chg_status.iout = 0;
@@ -671,7 +671,7 @@ static void p922x_reset_variables(struct oplus_p922x_ic *chip)
 	chip->p922x_chg_status.need_doublecheck_to_cp = false;
 	chip->p922x_chg_status.doublecheck_ok = true;
 	chip->p922x_chg_status.epp_current_limit = 0;
-	chip->p922x_chg_status.BPP_current_limit = 0;
+	chip->p922x_chg_status.bpp_current_limit = 0;
 	chip->p922x_chg_status.wpc_chg_param.pre_input_ma = 0;
 #ifdef DEBUG_FASTCHG_BY_ADB
 	chip->p922x_chg_status.vout_debug_mode = false;
@@ -730,10 +730,10 @@ static void p922x_charger_init(struct oplus_p922x_ic *chip)
 
 		mp2650_set_vindpm_vol(4800);
 
-		chip->p922x_chg_status.BPP_current_limit = 300;
-		chip->p922x_chg_status.BPP_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
-		mp2650_input_current_limit_without_aicl(chip->p922x_chg_status.BPP_current_limit);
-		p922x_set_rx_charge_current(chip, chip->p922x_chg_status.BPP_current_limit);
+		chip->p922x_chg_status.bpp_current_limit = 300;
+		chip->p922x_chg_status.bpp_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
+		mp2650_input_current_limit_without_aicl(chip->p922x_chg_status.bpp_current_limit);
+		p922x_set_rx_charge_current(chip, chip->p922x_chg_status.bpp_current_limit);
 	}
 
 	mp2650_set_termchg_current(WPC_TERMINATION_CURRENT);
@@ -1673,26 +1673,26 @@ static int p922x_get_vout(struct oplus_p922x_ic * chip)
 
 static void p922x_begin_CEP_detect(struct oplus_p922x_ic * chip)
 {
-	chip->p922x_chg_status.CEP_ready = false;
+	chip->p922x_chg_status.cep_ready = false;
 	schedule_delayed_work(&chip->p922x_CEP_work, P922X_CEP_INTERVAL);
 }
 
 static void p922x_reset_CEP_flag(struct oplus_p922x_ic * chip)
 {
-	chip->p922x_chg_status.CEP_ready = false;
+	chip->p922x_chg_status.cep_ready = false;
 }
 
 int p922x_get_CEP_flag(struct oplus_p922x_ic * chip)
 {
-	if (chip->p922x_chg_status.CEP_ready == false) {
+	if (chip->p922x_chg_status.cep_ready == false) {
 		chg_err("<~WPC~> CEP value isn't ready!\n");
 		return -1;
 	}
 	
 	//-2 <= CEP <= 2
-	if ((chip->p922x_chg_status.CEP_value == 0) || (chip->p922x_chg_status.CEP_value == 1) 
-		|| (chip->p922x_chg_status.CEP_value == 2) || (chip->p922x_chg_status.CEP_value == 0xFF)  
-		|| (chip->p922x_chg_status.CEP_value == 0xFE)) {
+	if ((chip->p922x_chg_status.cep_value == 0) || (chip->p922x_chg_status.cep_value == 1)
+		|| (chip->p922x_chg_status.cep_value == 2) || (chip->p922x_chg_status.cep_value == 0xFF)
+		|| (chip->p922x_chg_status.cep_value == 0xFE)) {
 		return 0;
 	} else {
 		return 1;
@@ -1701,8 +1701,8 @@ int p922x_get_CEP_flag(struct oplus_p922x_ic * chip)
 
 static void p922x_print_CEP_flag(struct oplus_p922x_ic * chip)
 {
-	if ((p922x_chip->p922x_chg_status.charge_online) && (chip->p922x_chg_status.CEP_ready)) {
-		chg_err("<~WPC~> CEP value = %d\n", chip->p922x_chg_status.CEP_value);
+	if ((p922x_chip->p922x_chg_status.charge_online) && (chip->p922x_chg_status.cep_ready)) {
+		chg_err("<~WPC~> CEP value = %d\n", chip->p922x_chg_status.cep_value);
 	}
 }
 
@@ -1722,17 +1722,17 @@ static int p922x_detect_CEP(struct oplus_p922x_ic * chip)
 
 	rc = p922x_read_reg(chip, 0x0033, &temp, 1);
 	if (rc) {
-		chip->p922x_chg_status.CEP_ready = false;
+		chip->p922x_chg_status.cep_ready = false;
 		
 		chg_err("Couldn't read CEP rc = %x\n", rc);
 		return rc;
 	}
 
-	chip->p922x_chg_status.CEP_ready = true;
-	chip->p922x_chg_status.CEP_value = temp;
+	chip->p922x_chg_status.cep_ready = true;
+	chip->p922x_chg_status.cep_value = temp;
 
 	if (chip->p922x_chg_status.skewing_info == true) {
-		cep_info = to_cep_info(chip->p922x_chg_status.CEP_value);
+		cep_info = to_cep_info(chip->p922x_chg_status.cep_value);
 		if (chip->p922x_chg_status.cep_info < cep_info)
 			chip->p922x_chg_status.cep_info = cep_info;
 	}
@@ -2494,7 +2494,7 @@ int p922x_charge_set_max_current_by_tbatt(struct oplus_p922x_ic *chip)
 		case BATTERY_STATUS__NORMAL:
 			chip->p922x_chg_status.fastchg_current_limit = chip->p922x_chg_status.wpc_chg_param.svooc_65w_iout_ma;
 			//chip->p922x_chg_status.epp_current_limit = chip->p922x_chg_status.wpc_chg_param.epp_input_ma;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_normal_fastchg_ma;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_normal_fastchg_ma;
 			switch (chip->p922x_chg_status.adapter_type){
 			case ADAPTER_TYPE_VOOC:
 				chip->p922x_chg_status.fastchg_current_limit = chip->p922x_chg_status.wpc_chg_param.vooc_temp_normal_fastchg_ma;
@@ -2522,12 +2522,12 @@ int p922x_charge_set_max_current_by_tbatt(struct oplus_p922x_ic *chip)
 			}
 			chip->p922x_chg_status.fastchg_current_limit = 0;
 			//chip->p922x_chg_status.epp_current_limit = chip->p922x_chg_status.wpc_chg_param.epp_input_ma;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_cold_fastchg_ma;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_cold_fastchg_ma;
 			charging_current = chip->p922x_chg_status.wpc_chg_param.bpp_temp_cold_fastchg_ma;
 			break;
 		case BATTERY_STATUS__LITTLE_COLD_TEMP:
 			//chip->p922x_chg_status.epp_current_limit = chip->p922x_chg_status.wpc_chg_param.epp_input_ma;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_little_cold_fastchg_ma;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_little_cold_fastchg_ma;
 			switch (chip->p922x_chg_status.adapter_type){
 			case ADAPTER_TYPE_VOOC:
 				chip->p922x_chg_status.fastchg_current_limit = chip->p922x_chg_status.wpc_chg_param.vooc_temp_little_cold_fastchg_ma;
@@ -2548,7 +2548,7 @@ int p922x_charge_set_max_current_by_tbatt(struct oplus_p922x_ic *chip)
 			break;
 		case BATTERY_STATUS__COOL_TEMP:
 			//chip->p922x_chg_status.epp_current_limit = chip->p922x_chg_status.wpc_chg_param.epp_input_ma;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_cool_fastchg_ma;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_cool_fastchg_ma;
 			switch (chip->p922x_chg_status.adapter_type){
 			case ADAPTER_TYPE_VOOC:
 				chip->p922x_chg_status.fastchg_current_limit = chip->p922x_chg_status.wpc_chg_param.vooc_temp_cool_fastchg_ma;
@@ -2569,7 +2569,7 @@ int p922x_charge_set_max_current_by_tbatt(struct oplus_p922x_ic *chip)
 			break;
 		case BATTERY_STATUS__LITTLE_COOL_TEMP:
 			//chip->p922x_chg_status.epp_current_limit = chip->p922x_chg_status.wpc_chg_param.epp_input_ma;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_little_cool_fastchg_ma;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_little_cool_fastchg_ma;
 			switch (chip->p922x_chg_status.adapter_type){
 			case ADAPTER_TYPE_VOOC:
 				chip->p922x_chg_status.fastchg_current_limit = chip->p922x_chg_status.wpc_chg_param.vooc_temp_little_cool_fastchg_ma;
@@ -2599,7 +2599,7 @@ int p922x_charge_set_max_current_by_tbatt(struct oplus_p922x_ic *chip)
 			}
 			chip->p922x_chg_status.fastchg_current_limit = 0;
 			//chip->p922x_chg_status.epp_current_limit = 0;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_warm_fastchg_ma;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = chip->p922x_chg_status.wpc_chg_param.bpp_temp_warm_fastchg_ma;
 			charging_current = chip->p922x_chg_status.wpc_chg_param.bpp_temp_warm_fastchg_ma;
 			break;
 		case BATTERY_STATUS__REMOVED:
@@ -2612,7 +2612,7 @@ int p922x_charge_set_max_current_by_tbatt(struct oplus_p922x_ic *chip)
 			}
 			chip->p922x_chg_status.fastchg_current_limit = 0;
 			//chip->p922x_chg_status.epp_current_limit = 0;
-			chip->p922x_chg_status.BPP_fastchg_current_ma = 0;
+			chip->p922x_chg_status.bpp_fastchg_current_ma = 0;
 			charging_current = 0;
 			break;
 		default:
@@ -2678,28 +2678,28 @@ static int oplus_wpc_set_input_current(struct oplus_p922x_ic *chip)
 			current_limit = chip->p922x_chg_status.epp_current_limit;
 			break;
 		default:
-			if (chip->p922x_chg_status.BPP_current_step_cnt > 0) {
-				chip->p922x_chg_status.BPP_current_step_cnt--;
-				if (chip->p922x_chg_status.BPP_current_step_cnt == 0) {
-					if (chip->p922x_chg_status.BPP_current_limit < 500) {
+			if (chip->p922x_chg_status.bpp_current_step_cnt > 0) {
+				chip->p922x_chg_status.bpp_current_step_cnt--;
+				if (chip->p922x_chg_status.bpp_current_step_cnt == 0) {
+					if (chip->p922x_chg_status.bpp_current_limit < 500) {
 						chg_err("<~WPC~> set BPP current limit 500ma\n");
-						chip->p922x_chg_status.BPP_current_limit = 500;
+						chip->p922x_chg_status.bpp_current_limit = 500;
 						mp2650_set_vindpm_vol(4800);
-						chip->p922x_chg_status.BPP_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
-					} else if (chip->p922x_chg_status.BPP_current_limit < 700){
+						chip->p922x_chg_status.bpp_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
+					} else if (chip->p922x_chg_status.bpp_current_limit < 700) {
 						chg_err("<~WPC~> set BPP current limit 700ma\n");
-						chip->p922x_chg_status.BPP_current_limit = 700;
-						chip->p922x_chg_status.BPP_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
-					} else if (chip->p922x_chg_status.BPP_current_limit < 
+						chip->p922x_chg_status.bpp_current_limit = 700;
+						chip->p922x_chg_status.bpp_current_step_cnt = BPP_CURRENT_INCREASE_TIME;
+					} else if (chip->p922x_chg_status.bpp_current_limit <
 							chip->p922x_chg_status.wpc_chg_param.bpp_input_ma){
 						chg_err("<~WPC~> set BPP current limit 750ma\n");
-						chip->p922x_chg_status.BPP_current_limit = chip->p922x_chg_status.wpc_chg_param.bpp_input_ma;
+						chip->p922x_chg_status.bpp_current_limit = chip->p922x_chg_status.wpc_chg_param.bpp_input_ma;
 					}
 				}
 			}
-			if(chip->p922x_chg_status.BPP_current_limit < 300)
-				chip->p922x_chg_status.BPP_current_limit = 300;
-			current_limit = chip->p922x_chg_status.BPP_current_limit;
+			if(chip->p922x_chg_status.bpp_current_limit < 300)
+				chip->p922x_chg_status.bpp_current_limit = 300;
+			current_limit = chip->p922x_chg_status.bpp_current_limit;
 			break;
 	}
 	if(g_oplus_chip->batt_full == true && g_oplus_chip->in_rechging == false){
@@ -2923,8 +2923,8 @@ static int p922x_charge_status_process(struct oplus_p922x_ic *chip)
 					cep_nonzero_cnt = 0;
 					chip->p922x_chg_status.charge_status = WPC_CHG_STATUS_CHARGER_FASTCHG_INIT;
 					chip->p922x_chg_status.skewing_info = true;
-					if (chip->p922x_chg_status.cep_info < to_cep_info(chip->p922x_chg_status.CEP_value))
-						chip->p922x_chg_status.cep_info = to_cep_info(chip->p922x_chg_status.CEP_value);
+					if (chip->p922x_chg_status.cep_info < to_cep_info(chip->p922x_chg_status.cep_value))
+						chip->p922x_chg_status.cep_info = to_cep_info(chip->p922x_chg_status.cep_value);
 				}
 #endif
 				break;
@@ -2984,8 +2984,8 @@ static int p922x_charge_status_process(struct oplus_p922x_ic *chip)
 				cep_nonzero_cnt = 0;
 				chip->p922x_chg_status.charge_status = WPC_CHG_STATUS_CHARGER_FASTCHG_INIT;
 				chip->p922x_chg_status.skewing_info = true;
-				if (chip->p922x_chg_status.cep_info < to_cep_info(chip->p922x_chg_status.CEP_value))
-					chip->p922x_chg_status.cep_info = to_cep_info(chip->p922x_chg_status.CEP_value);
+				if (chip->p922x_chg_status.cep_info < to_cep_info(chip->p922x_chg_status.cep_value))
+					chip->p922x_chg_status.cep_info = to_cep_info(chip->p922x_chg_status.cep_value);
 			} 
 #endif
 		}

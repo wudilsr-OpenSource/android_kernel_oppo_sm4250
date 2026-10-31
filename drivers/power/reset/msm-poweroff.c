@@ -27,11 +27,11 @@
 #include <soc/qcom/watchdog.h>
 #include <soc/qcom/minidump.h>
 #ifdef VENDOR_EDIT
-#include "soc/oppo/oppo_project.h"
+#include "soc/oplus/oplus_project.h"
 #endif /*VENDOR_EDIT*/
 
 #ifdef CONFIG_OPLUS_FEATURE_QCOM_MINIDUMP_ENHANCE
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/oplus_project.h>
 #include <soc/oplus/system/qcom_minidump_enhance.h>
 #endif
 #define EMERGENCY_DLOAD_MAGIC1    0x322A4F99
@@ -663,6 +663,9 @@ static void msm_restart_prepare(const char *cmd)
 		} else if (!strncmp(cmd, "safe", 4)) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_SAFE);
+		} else if (!strncmp(cmd, "novib", 5)) {
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_REBOOT_NO_VIBRATION);
 		}
 		#endif
 		else {
@@ -754,7 +757,7 @@ static int msm_restart_probe(struct platform_device *pdev)
 	int ret = 0;
 
 #ifdef CONFIG_OPLUS_FEATURE_QCOM_MINIDUMP_ENHANCE
-	if (oppo_daily_build() == true || get_eng_version() == AGING || get_eng_version() == FACTORY)
+	if (oplus_daily_build() == true || get_eng_version() == AGING || get_eng_version() == FACTORY)
 		dload_type = SCM_DLOAD_FULLDUMP;
 	else
 		dload_type = SCM_DLOAD_MINIDUMP;

@@ -193,9 +193,6 @@ struct sock_common {
 	u64 skc_oplus_last_rcv_stamp[2];//index 0 = last, index 1 = now
 	u64 skc_oplus_last_send_stamp[2];//index 0 = last, index 1 = now
 	//#endif /* OPLUS_FEATURE_NWPOWER */
-        //#ifdef OPLUS_FEATURE_WIFI_SLA
-	u32 skc_oplus_mark;
-	//#endif /* OPLUS_FEATURE_WIFI_SLA */
 #if IS_ENABLED(CONFIG_IPV6)
 	struct in6_addr		skc_v6_daddr;
 	struct in6_addr		skc_v6_rcv_saddr;
@@ -372,15 +369,12 @@ struct sock {
 #define sk_incoming_cpu		__sk_common.skc_incoming_cpu
 #define sk_flags		__sk_common.skc_flags
 #define sk_rxhash		__sk_common.skc_rxhash
-
 //#ifdef OPLUS_FEATURE_NWPOWER
 #define sk_oplus_pid				__sk_common.skc_oplus_pid
 #define oplus_last_rcv_stamp		__sk_common.skc_oplus_last_rcv_stamp
 #define oplus_last_send_stamp	__sk_common.skc_oplus_last_send_stamp
 //#endif /* OPLUS_FEATURE_NWPOWER */
-//#ifdef OPLUS_FEATURE_WIFI_SLA
-#define oplus_sla_mark   __sk_common.skc_oplus_mark
-//#endif /* OPLUS_FEATURE_WIFI_SLA */
+
 	socket_lock_t		sk_lock;
 	atomic_t		sk_drops;
 	int			sk_rcvlowat;
@@ -1889,19 +1883,12 @@ sk_dst_get(struct sock *sk)
 
 static inline void dst_negative_advice(struct sock *sk)
 {
-	struct dst_entry *ndst, *dst = __sk_dst_get(sk);
+	struct dst_entry *dst = __sk_dst_get(sk);
 
 	sk_rethink_txhash(sk);
 
-	if (dst && dst->ops->negative_advice) {
-		ndst = dst->ops->negative_advice(dst);
-
-		if (ndst != dst) {
-			rcu_assign_pointer(sk->sk_dst_cache, ndst);
-			sk_tx_queue_clear(sk);
-			sk->sk_dst_pending_confirm = 0;
-		}
-	}
+	if (dst && dst->ops->negative_advice)
+		dst->ops->negative_advice(sk, dst);
 }
 
 static inline void

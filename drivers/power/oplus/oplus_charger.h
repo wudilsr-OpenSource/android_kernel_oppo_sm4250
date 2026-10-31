@@ -848,16 +848,30 @@ struct oplus_chg_chip {
 	bool vooc_show_ui_soc_decimal;
 	struct thermal_zone_device *shell_themal;
 	int svooc_disconnect_count;
+	unsigned long long svooc_detect_time;
+	unsigned long long svooc_detach_time;
 	struct device_node *fast_node;
 	const struct oplus_chg_operations *sub_chg_ops;
 	bool  is_double_charger_support;
 	int pd_svooc;
 	int pd_chging;
 	bool flash_led_status;
+	int sub_batt_volt;
+	int sub_batt_icharging;
+	int sub_batt_soc;
 	int detect_detach_unexpeactly;
+	int sub_batt_temperature;
 	bool vooc_start_fail;
 	bool gauge_iic_err;
 	unsigned long gauge_iic_err_time_record;
+	int soc_ajust;
+	bool is_abnormal_adapter;
+	bool support_abnormal_adapter;
+	bool icon_debounce;
+	int abnormal_adapter_dis_cnt;
+	bool disable_ship_mode;
+	int ibat_save[10];
+	int pd_wait_svid;
 };
 
 
@@ -1071,6 +1085,7 @@ bool oplus_voocphy_set_fastchg_state(unsigned char fastchg_state);
 void oplus_vooc_send_handshake_seq(void);
 void oplus_chg_set_flash_led_status(bool val);
 bool oplus_voocphy_stage_check(void);
+void oplus_chg_check_break(int vbus_rising);
 void oplus_basetimer_monitor_start(void);
 void oplus_basetimer_monitor_stop(void);
 void opchg_voocphy_clear_dbg_info(void);

@@ -51,6 +51,16 @@ obj-$(CONFIG_NANDSWAP)		+= oplus/oplus_nandswap/
 #Add for svelte logging
 obj-$(CONFIG_SVELTE)     +=  oplus/svelte/
 #endif /* OPLUS_FEATURE_MEMLEAK_DETECT */
+
+#ifdef OPLUS_FEATURE_HEALTHINFO
+obj-y  +=  oplus/healthinfo/
+#endif /* OPLUS_FEATURE_HEALTHINFO */
+
+#ifdef OPLUS_FEATURE_IM
+#ted.lin@optimization add for im module
+obj-$(CONFIG_OPLUS_FEATURE_IM) += oplus/im/
+#endif /* OPLUS_FEATURE_IM */
+
 #ifdef OPLUS_FEATURE_LOWMEM_DBG
 obj-$(CONFIG_OPLUS_FEATURE_LOWMEM_DBG) += oplus/lowmem_dbg/
 #endif /* OPLUS_FEATURE_LOWMEM_DBG */

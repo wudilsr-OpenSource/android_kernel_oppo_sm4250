@@ -414,11 +414,13 @@ struct file *sock_alloc_file(struct socket *sock, int flags, const char *dname)
 
 	sock->file = file;
 	file->private_data = sock;
+
 	//#ifdef OPLUS_FEATURE_NWPOWER
 	if (sock->sk) {
 		sock->sk->sk_oplus_pid = current->tgid;
 	}
 	//#endif /* OPLUS_FEATURE_NWPOWER */
+
 	return file;
 }
 EXPORT_SYMBOL(sock_alloc_file);

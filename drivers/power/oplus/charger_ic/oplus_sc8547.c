@@ -56,6 +56,9 @@ static struct sc8547 *__sc;
 int voocphy_log_level = 2;
 
 #define SC8547_DEVICE_ID		0x66
+#define ADAPTER_CHECK_VOOC_HEAD_TIMES	0x2
+#define ADAPTER_CHECK_CMD_DATA_TIMES	0x2
+#define FAST_CHARGER_MOS_DISABLE	0
 
 #define sc_alert(fmt, ...)	\
 do {					\
@@ -1006,6 +1009,7 @@ BattMngr_err_code_e oplus_vooc_get_mesg_from_adapter(UINT8 pmic_index)
 	//int ret;
 	UINT8 vooc_head = 0;
 	UINT8 vooc_move_head = 0;
+	unsigned char dchg_enable_status = 0;
 
 	//handle the frame head & adapter_data
 	vooc_head = (oplus_vooc_mg->voocphy_rx_buff & VOOC_HEAD_MASK) >> VOOC_HEAD_SHIFT;
@@ -1023,6 +1027,7 @@ BattMngr_err_code_e oplus_vooc_get_mesg_from_adapter(UINT8 pmic_index)
 		}
 		oplus_vooc_mg->vooc_head = SVOOC_INVERT_HEAD;
 		oplus_vooc_mg->adapter_type = ADAPTER_SVOOC; //detect svooc adapter
+		oplus_vooc_mg->adapter_check_vooc_head_count = 0;
 	} else if (vooc_head == VOOC3_HEAD || vooc_move_head == VOOC3_HEAD) {
 		if (vooc_head == VOOC3_HEAD) {
 			sc_dbg("VOOC30_HEAD");
@@ -1032,7 +1037,9 @@ BattMngr_err_code_e oplus_vooc_get_mesg_from_adapter(UINT8 pmic_index)
 		}
 		oplus_vooc_mg->vooc_head = VOOC3_INVERT_HEAD;
 		oplus_vooc_mg->adapter_type = ADAPTER_VOOC30; //detect vooc30 adapter
+		oplus_vooc_mg->adapter_check_vooc_head_count = 0;
 	} else if (vooc_head == VOOC2_HEAD ||vooc_move_head == VOOC2_HEAD) {
+		oplus_vooc_mg->adapter_check_vooc_head_count = 0;
 		if (vooc_move_head == VOOC2_HEAD) {
 			sc_dbg("VOOC20_MOVE_HEAD");
 			oplus_vooc_mg->vooc_move_head = true;
@@ -1078,10 +1085,21 @@ BattMngr_err_code_e oplus_vooc_get_mesg_from_adapter(UINT8 pmic_index)
 			#endif
 		}
 	} else {
-		sc_err("unknow frame head, reset voocphy & fastchg rerun check");
-		oplus_vooc_set_status_and_notify_ap(FAST_NOTIFY_ERR_COMMU);
-		oplus_vooc_mg->rcv_date_err_num++;
-		return BATTMNGR_EUNSUPPORTED;
+		oplus_vooc_mg->adapter_check_vooc_head_count++;
+		oplus_voocphy_direct_chg_enable(&dchg_enable_status);
+		if (dchg_enable_status != FAST_CHARGER_MOS_DISABLE &&
+		    oplus_vooc_mg->pre_adapter_ask_cmd == VOOC_CMD_GET_BATT_VOL &&
+		    oplus_vooc_mg->adapter_check_vooc_head_count < ADAPTER_CHECK_VOOC_HEAD_TIMES &&
+		    oplus_vooc_mg->adjust_curr != ADJ_CUR_STEP_REPLY_VBATT) {
+			sc_err("unknow frame head error, try again adapter_check_vooc_head_count =%d",
+				oplus_vooc_mg->adapter_check_vooc_head_count);
+			return BATTMNGR_EUNSUPPORTED;
+		} else {
+			sc_err("unknow frame head, reset voocphy & fastchg rerun check");
+			oplus_vooc_set_status_and_notify_ap(FAST_NOTIFY_ERR_COMMU);
+			oplus_vooc_mg->rcv_date_err_num++;
+			return BATTMNGR_EUNSUPPORTED;
+		}
 	}
 
 	if (!oplus_vooc_mg->vooc_move_head) {
@@ -1493,6 +1511,8 @@ BattMngr_err_code_e oplus_vooc_variables_reset(void)
 	oplus_vooc_mg->rcv_done_200ms_timeout_num = 0;
 	oplus_vooc_mg->rcv_date_err_num = 0;
 	oplus_vooc_mg->irq_rcvok_num = 0;
+	oplus_vooc_mg->adapter_check_vooc_head_count = 0;
+	oplus_vooc_mg->adapter_check_cmd_data_count = 0;
 
 	//default vooc head as svooc
 	status = oplus_vooc_write_mesg_mask(VOOC_INVERT_HEAD_MASK,
@@ -2098,10 +2118,21 @@ BattMngr_err_code_e oplus_vooc_handle_get_batt_vol_cmd(void)
 BattMngr_err_code_e oplus_vooc_handle_null_cmd(void)
 {
 	BattMngr_err_code_e status = BATTMNGR_SUCCESS;
+	unsigned char dchg_enable_status = 0;
 
-	//status = oplus_vooc_reset_voocphy();
-	sc_err( " null cmd");
-
+	oplus_vooc_mg->adapter_check_cmd_data_count++;
+	oplus_voocphy_direct_chg_enable(&dchg_enable_status);
+	if (dchg_enable_status != FAST_CHARGER_MOS_DISABLE &&
+	    oplus_vooc_mg->pre_adapter_ask_cmd == VOOC_CMD_GET_BATT_VOL &&
+	    oplus_vooc_mg->adapter_check_cmd_data_count < ADAPTER_CHECK_CMD_DATA_TIMES &&
+	    oplus_vooc_mg->adjust_curr != ADJ_CUR_STEP_REPLY_VBATT) {
+		sc_err("get error cmd data, try again adapter_check_vooc_head_count =%d",
+			oplus_vooc_mg->adapter_check_cmd_data_count);
+		return BATTMNGR_EUNSUPPORTED;
+	} else {
+		sc_err("get error cmd data, reset voocphy & fastchg rerun check");
+		oplus_vooc_set_status_and_notify_ap(FAST_NOTIFY_ERR_COMMU);
+	}
 	return status;
 }
 
@@ -2144,7 +2175,7 @@ BattMngr_err_code_e oplus_vooc_handle_ask_ap_status(void)
 BattMngr_err_code_e oplus_vooc_reply_adapter_mesg(void)
 {
 	BattMngr_err_code_e status = BATTMNGR_SUCCESS;
-
+	bool cur_data_valid = true;
 	//memset set tx_buffer head & tx_buffer data
 	status = oplus_vooc_write_mesg_mask(TX0_DET_BIT3_TO_BIT7_MASK,
 					&oplus_vooc_mg->voocphy_tx_buff[0], 0);
@@ -2195,7 +2226,10 @@ BattMngr_err_code_e oplus_vooc_reply_adapter_mesg(void)
 			status = oplus_vooc_handle_get_batt_vol_cmd();
 			break;
 		case VOOC_CMD_NULL:
+		case VOOC_CMD_RECEVICE_DATA_0E:
+		case VOOC_CMD_RECEVICE_DATA_0F:
 			status = oplus_vooc_handle_null_cmd();
+			cur_data_valid = false;	
 			break;
 		case VOOC_CMD_TELL_USB_BAD:
 			status = oplus_vooc_handle_tell_usb_bad_cmd();
@@ -2208,7 +2242,8 @@ BattMngr_err_code_e oplus_vooc_reply_adapter_mesg(void)
 			sc_err("cmd not support, default handle");
 			break;
 	}
-
+	if (cur_data_valid)
+		oplus_vooc_mg->adapter_check_cmd_data_count = 0;
 	return status;
 }
 
@@ -2425,7 +2460,8 @@ BattMngr_err_code_e oplus_vooc_variables_init(void)
 	oplus_vooc_mg->ap_handle_timeout_num = 0;
 	oplus_vooc_mg->rcv_done_200ms_timeout_num = 0;
 	oplus_vooc_mg->rcv_date_err_num = 0;
-
+	oplus_vooc_mg->adapter_check_vooc_head_count = 0;
+	oplus_vooc_mg->adapter_check_cmd_data_count = 0;
 	//default vooc head as svooc
 	status = oplus_vooc_write_mesg_mask(VOOC_INVERT_HEAD_MASK,
 				&oplus_vooc_mg->voocphy_tx_buff[0], oplus_vooc_mg->vooc_head);
@@ -2591,6 +2627,7 @@ void oplus_basetimer_monitor_stop(void)
 void oplus_vooc_switch_mode(int mode);
 extern void oplus_chg_set_charger_type_unknown(void);
 extern void oplus_chg_suspend_charger(void);
+extern void oplus_chg_unsuspend_charger(void);
 void oplus_voocphy_turn_off_fastchg(void)
 {
 	//struct oplus_vooc_chip *chip = g_vooc_chip;
@@ -2617,7 +2654,11 @@ void oplus_voocphy_turn_off_fastchg(void)
 		oplus_chg_set_charger_type_unknown();
 		oplus_chg_wake_update_work();
 		//oplus_vooc_set_awake(chip, false);
-		oplus_chg_suspend_charger();
+		if (chg->stop_chg == 0) {
+			oplus_chg_suspend_charger();
+		} else {
+			oplus_chg_unsuspend_charger();
+		}
 		chg_err("oplus_voocphy_turn_off_fastchg\n");
 	}
 	return;
@@ -3889,6 +3930,9 @@ void oplus_reset_fastchg_after_usbout(void)
 	oplus_vooc_mg->fastchg_to_warm = false;
 	oplus_vooc_mg->fastchg_dummy_start = false;
 	oplus_vooc_mg->fastchg_reactive = false;
+	oplus_vooc_mg->adapter_check_vooc_head_count = 0;
+	oplus_vooc_mg->adapter_check_cmd_data_count = 0;
+
 	oplus_voocphy_set_user_exit_fastchg(false);
 	oplus_voocphy_set_fastchg_state(OPLUS_FASTCHG_STAGE_1);
 	opchg_ui_soc_decimal_reset();
@@ -3942,6 +3986,8 @@ static void oplus_check_chg_out_work_func(void)
 		oplus_vooc_mg->fastchg_to_warm = false;
 		oplus_vooc_mg->fastchg_dummy_start = false;
 		oplus_vooc_mg->fastchg_reactive = false;
+		oplus_vooc_mg->adapter_check_vooc_head_count = 0;
+		oplus_vooc_mg->adapter_check_cmd_data_count = 0;	
 		oplus_voocphy_set_user_exit_fastchg(false);
 
 		chip->voocphy.fastchg_to_normal = oplus_vooc_mg->fastchg_to_normal;
@@ -4995,15 +5041,6 @@ void opchg_voocphy_set_switch_normal_charger(void)
 	sc_err("switch switch2 %d to normal finshed\n", oplus_voocphy_get_switch_gpio_val());
 
 	return;
-}
-
-int oplus_voocphy_chip_id(void)
-{
-	if (oplus_vooc_mg) {
-		return oplus_vooc_mg->chrpmp_id;
-	} else {
-		return 0;
-	}
 }
 
 int oplus_voocphy_hw_setting_reset(void)

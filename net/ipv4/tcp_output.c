@@ -1150,6 +1150,7 @@ static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
 			       sizeof(struct inet6_skb_parm)));
 
 	err = icsk->icsk_af_ops->queue_xmit(sk, skb, &inet->cork.fl);
+
 	//#ifdef OPLUS_FEATURE_NWPOWER
 	oplus_match_tcp_output(sk);
 	//#endif /* OPLUS_FEATURE_NWPOWER */
@@ -2944,9 +2945,6 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb, int segs)
 
 	if (likely(!err)) {
 		TCP_SKB_CB(skb)->sacked |= TCPCB_EVER_RETRANS;
-		//#ifdef OPLUS_FEATURE_NWPOWER
-		oplus_match_tcp_output_retrans(sk);
-		//#endif /* OPLUS_FEATURE_NWPOWER */
 		trace_tcp_retransmit_skb(sk, skb);
 	} else if (err != -EBUSY) {
 		NET_ADD_STATS(sock_net(sk), LINUX_MIB_TCPRETRANSFAIL, segs);

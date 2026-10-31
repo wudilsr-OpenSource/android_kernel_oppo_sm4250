@@ -192,7 +192,7 @@ out:
 }
 
 #ifdef CONFIG_SWAP
-#if defined(CONFIG_NANDSWAP)
+#if defined(CONFIG_NANDSWAP) || defined(CONFIG_PROCESS_RECLAIM_ENHANCE)
 int swapin_walk_pmd_entry(pmd_t *pmd, unsigned long start,
 	unsigned long end, struct mm_walk *walk)
 #else
@@ -213,7 +213,7 @@ static int swapin_walk_pmd_entry(pmd_t *pmd, unsigned long start,
 		struct page *page;
 		spinlock_t *ptl;
 
-#if defined(CONFIG_NANDSWAP)
+#if defined(CONFIG_NANDSWAP) || defined(CONFIG_PROCESS_RECLAIM_ENHANCE)
 		if (!list_empty(&vma->vm_mm->mmap_sem.wait_list))
 			return -1;
 #endif

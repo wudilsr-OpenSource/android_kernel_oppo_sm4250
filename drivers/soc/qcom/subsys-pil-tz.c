@@ -25,6 +25,10 @@
 #include <linux/soc/qcom/smem.h>
 #include <linux/soc/qcom/smem_state.h>
 
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+#include <soc/oplus/system/oplus_mm_kevent_fb.h>
+#endif
+
 #include "peripheral-loader.h"
 
 #define XO_FREQ			19200000
@@ -825,6 +829,14 @@ static void log_failure_reason(const struct pil_tz_data *d)
 
 	strlcpy(reason, smem_reason, min(size, (size_t)MAX_SSR_REASON_LEN));
 	pr_err("%s subsystem failure reason: %s.\n", name, reason);
+
+	#ifdef OPLUS_FEATURE_MM_FEEDBACK
+	if (strncmp(name, "adsp", strlen("adsp")) == 0) {
+		mm_fb_audio_kevent_named(OPLUS_AUDIO_EVENTID_ADSP_CRASH, \
+				MM_FB_KEY_RATELIMIT_5MIN, "FieldData@@%s$$detailData@@audio$$module@@adsp", reason);
+	}
+	#endif
+
     #ifdef OPLUS_FEATURE_MODEM_MINIDUMP
     //Add for customized subsystem ramdump to skip generate dump cause by SAU
     if (!strncmp(name, "modem", 4)) {

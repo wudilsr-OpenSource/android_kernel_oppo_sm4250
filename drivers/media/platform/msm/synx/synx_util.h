@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 #ifndef __SYNX_UTIL_H__
@@ -14,6 +14,9 @@ bool synx_debugfs_enabled(void);
 
 /**
  * @brief: Function to check if the external sync obj is valid
+ *
+ * Function acquires reference on synx_table_row returned,
+ * which should be released through synx_release_handle function
  *
  * @param type : External sync object type
  *
@@ -192,6 +195,13 @@ struct synx_table_row *synx_from_fence(struct dma_fence *fence);
 void *synx_from_handle(s32 synx_id);
 
 /**
+ * @brief: Function to release handle reference
+ *
+ * @param pObj : Pointer returned from synx_from_handle
+ */
+void synx_release_handle(void *pObj);
+
+/**
  * @brief: Function to create a new synx handle
  *
  * @param pObj : Object to be associated with the created handle
@@ -229,12 +239,14 @@ int synx_generate_secure_key(struct synx_table_row *row);
  * @param row      : Pointer to the synx object row
  * @param synx_obj : Synx handle
  * @param key      : Pointer to key (filled by the function)
+ * @param fence    : Pointer to dma fence backing synx objcet row
  *
  * @return Status of operation. Negative in case of error. Zero otherwise.
  */
 int synx_generate_import_key(struct synx_table_row *row,
 	s32 synx_obj,
-	u32 *key);
+	u32 *key,
+	struct dma_fence *fence);
 
 /**
  * @brief: Function to authenticate requests for importing synx handle

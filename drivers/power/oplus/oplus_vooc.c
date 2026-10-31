@@ -845,6 +845,7 @@ static void oplus_vooc_fastchg_func(struct work_struct *work)
 		if ((i == 2) && (data != 0x50) && (!fw_ver_info)
 				&& (!adapter_fw_ver_info) && (!adapter_model_factory)) {	/*data recvd not start from "101"*/
 			vooc_xlog_printk(CHG_LOG_CRTI, "  data err:0x%x\n", data);
+			oplus_chg_vooc_mcu_error(data);
 			chip->allow_reading = true;
 			if (chip->fastchg_started == true) {
 				chip->fastchg_started = false;
@@ -880,6 +881,12 @@ static void oplus_vooc_fastchg_func(struct work_struct *work)
 	}
 	vooc_xlog_printk(CHG_LOG_CRTI, " recv data:0x%x, ap:0x%x, mcu:0x%x\n",
 		data, chip->fw_data_version, chip->fw_mcu_version);
+	if(data == VOOC_NOTIFY_FAST_ABSENT ||
+		data == VOOC_NOTIFY_BAD_CONNECTED ||
+		data == VOOC_NOTIFY_TEMP_OVER ||
+		data == VOOC_NOTIFY_BTB_TEMP_OVER) {
+		oplus_chg_vooc_mcu_error(data);
+	}
 
 	if (data == VOOC_NOTIFY_FAST_PRESENT) {
 		oplus_vooc_set_awake(chip, true);
@@ -973,6 +980,7 @@ static void oplus_vooc_fastchg_func(struct work_struct *work)
 		} else {
 			chip->fast_chg_type = oplus_vooc_convert_fast_chg_type(data);
 		}
+		oplus_chg_set_fast_chg_type(chip->fast_chg_type);
 		adapter_model_factory = 0;
 		if (chip->fast_chg_type == 0x0F
 				|| chip->fast_chg_type == 0x1F

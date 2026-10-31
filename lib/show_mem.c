@@ -10,7 +10,7 @@
 #include <linux/cma.h>
 
 #ifdef OPLUS_FEATURE_HEALTHINFO
-#include <linux/oppo_healthinfo/oppo_ion.h>
+#include <linux/healthinfo/ion.h>
 #endif /*OPLUS_FEATURE_HEALTHINFO*/
 
 void show_mem(unsigned int filter, nodemask_t *nodemask)

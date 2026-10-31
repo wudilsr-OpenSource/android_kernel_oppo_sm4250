@@ -365,6 +365,9 @@ typedef enum _CHG_PUMP_SETTING_REASON
 #define VOOC_CMD_TELL_MODEL_PROCESS 0xF2
 #define VOOC_CMD_ASK_BATT_SYS_PROCESS 0xF3
 
+#define VOOC_CMD_RECEVICE_DATA_0E   0x0E
+#define VOOC_CMD_RECEVICE_DATA_0F   0x0F
+
 #define OPLUS_IS_VUBS_OK_PREDATA_VOOC20	((u16)0xa002)
 #define OPLUS_IS_VUBS_OK_PREDATA_VOOC30	((u16)0xa001)
 #define OPLUS_IS_VUBS_OK_PREDATA_SVOOC	((u16)0x2002)
@@ -611,6 +614,8 @@ typedef struct _vooc_manager
 
 	struct pinctrl_state *charger_gpio_sw_ctrl2_high;
 	struct pinctrl_state *charger_gpio_sw_ctrl2_low;
+	int adapter_check_vooc_head_count;
+	int adapter_check_cmd_data_count;
 }vooc_manager;
 
 struct oplus_voocphy_operations {
