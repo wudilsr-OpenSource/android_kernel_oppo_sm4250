@@ -21,7 +21,7 @@ export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/sdm660auto.conf)
 endif
 ifeq ($(CONFIG_ARCH_BENGAL), y)
 include $(srctree)/techpack/audio/config/bengalauto.conf
-export
+export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/bengalauto.conf)
 endif
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
