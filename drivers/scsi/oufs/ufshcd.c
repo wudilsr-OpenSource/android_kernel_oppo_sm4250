@@ -4082,6 +4082,7 @@ send_orig_cmd:
 
 	err = ufshcd_map_sg(hba, lrbp);
 	if (err) {
+		ufshcd_release(hba, false);
 		lrbp->cmd = NULL;
 		clear_bit_unlock(tag, &hba->lrb_in_use);
 		ufshcd_release_all(hba);
@@ -9701,14 +9702,13 @@ reinit:
 
 		scsi_scan_host(hba->host);
 #ifdef OPLUS_FEATURE_UFSPLUS
-#if defined(CONFIG_UFSFEATURE)
+#if defined(CONFIG_UFSFEATURE) && defined(CONFIG_UFSHPB) && defined(CONFIG_UFSTW)
 		ufsf_device_check(hba);
 		ufsf_init(&hba->ufsf);
-#if defined(CONFIG_UFSHPB)
+
 		/*temporary for hynix 2.2 tw function*/
 		if(hba->dev_info.w_manufacturer_id == 0x1AD && hba->dev_info.w_spec_version == 0x220)
 			ufsplus_hpb_status = 1;
-#endif
 #endif
 #if defined(CONFIG_SCSI_SKHPB)
 		if (hba->dev_info.w_manufacturer_id == UFS_VENDOR_SKHYNIX)

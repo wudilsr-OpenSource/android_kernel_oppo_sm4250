@@ -29,7 +29,10 @@
 #include <linux/version.h>
 
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#include <../../../../kernel/msm-5.4/mm/internal.h>
+#include <../../../../kernel/msm-5.4/mm/slab.h>
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 #include <../../../../kernel/msm-4.19/mm/internal.h>
 #include <../../../../kernel/msm-4.19/mm/slab.h>
 #else

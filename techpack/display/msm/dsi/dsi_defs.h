@@ -349,9 +349,10 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SEED_ENTER,
 	DSI_CMD_SEED_EXIT,
 /*Sunshiyue, 2020/05/28, add for CABC enter and exit sequence*/
-	DSI_CMD_CABC_LOW_MODE,
-	DSI_CMD_CABC_HIGH_MODE,
 	DSI_CMD_CABC_OFF,
+	DSI_CMD_CABC_MODE1,
+	DSI_CMD_CABC_MODE2,
+	DSI_CMD_CABC_MODE3,
         DSI_CMD_CABC_UI,
         DSI_CMD_CABC_IMAGE,
         DSI_CMD_CABC_VIDEO,

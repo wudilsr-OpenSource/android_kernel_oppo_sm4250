@@ -1017,6 +1017,7 @@ static int aw87xxx_product_select(struct aw87xxx *aw87xxx, uint8_t chip_type)
 {
 	aw_dev_info(aw87xxx->dev, "%s enter, dev_i2c%d@0x%02X\n", __func__,
 		    aw87xxx->i2c_seq, aw87xxx->i2c_addr);
+	pr_info("chipid: 0x%02X\n",aw87xxx->chipid);
 
 	switch (chip_type) {
 	case AW87XXX_339:

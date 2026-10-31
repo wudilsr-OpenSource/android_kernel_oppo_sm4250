@@ -20,20 +20,10 @@ static struct wakeup_count_desc_t wc_powerkey_lahaina = {
 
 static struct wakeup_count_desc_t wc_rtc_alarm_lahaina = {
 	.module_name = "rtc_alarm",
-	.module_mask = WS_CNT_RTCALARM,
-	.ws_number = 1,
-	.ws_desc[0] = {
-		.prop = IRQ_PROP_REAL,
-		.name = IRQ_NAME_RTCALARM,
-	},
-};
-
-static struct wakeup_count_desc_t wc_alarm_lahaina = {
-	.module_name = "alarm",
 	.module_mask = WS_CNT_ALARM,
 	.ws_number = 1,
 	.ws_desc[0] = {
-		.prop = IRQ_PROP_EXCHANGE, /* dummy irq, but think it is true */
+		.prop = IRQ_PROP_REAL,
 		.name = IRQ_NAME_ALARM,
 	},
 };
@@ -43,19 +33,19 @@ static struct wakeup_count_desc_t wc_modem_lahaina = {
 	.module_mask = WS_CNT_MODEM,
 	.ws_number = 4,
 	.ws_desc[0] = {
-		.prop = IRQ_PROP_EXCHANGE,
-		.name = IRQ_NAME_MODEM_QSI,
+		.prop = IRQ_PROP_REAL,
+		.name = "modem",
 	},
 	.ws_desc[1] = {
 		.prop = IRQ_PROP_REAL,
-		.name = IRQ_NAME_MODEM_GLINK,
+		.name = "glink-native-modem",
 	},
 	.ws_desc[2] = {
 		.prop = IRQ_PROP_REAL,
 		.name = IRQ_NAME_MODEM_IPA,
 	},
 	.ws_desc[3] = {
-		.prop = IRQ_PROP_EXCHANGE,
+		.prop = IRQ_PROP_REAL,
 		.name = IRQ_NAME_MODEM_QMI,
 	},
 };
@@ -65,12 +55,12 @@ static struct wakeup_count_desc_t wc_wlan_lahaina = {
 	.module_mask = WS_CNT_WLAN,
 	.ws_number = 2,
 	.ws_desc[0] = {
-		.prop = IRQ_PROP_EXCHANGE,
-		.name = IRQ_NAME_WLAN_MSI,
+		.prop = IRQ_PROP_REAL,
+		.name = "pci0_wlan",
 	},
 	.ws_desc[1] = {
 		.prop = IRQ_PROP_REAL,
-		.name = IRQ_NAME_WLAN_IPCC_DATA,
+		.name = "wlan_",
 	},
 };
 
@@ -157,7 +147,6 @@ static struct wakeup_count_desc_t wc_sum_lahaina = {
 static struct wakeup_count_desc_t * const all_modules_lahaina[] = {
 	&wc_powerkey_lahaina,
 	&wc_rtc_alarm_lahaina,
-	&wc_alarm_lahaina,
 	&wc_modem_lahaina,
 	&wc_wlan_lahaina,
 	&wc_adsp_lahaina,

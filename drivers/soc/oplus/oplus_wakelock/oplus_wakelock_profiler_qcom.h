@@ -45,8 +45,8 @@
 #define IRQ_NAME_MODEM_QSI "msi_modem_irq"
 #define IRQ_NAME_MODEM_GLINK "glink-native-modem"
 #define IRQ_NAME_MODEM_IPA "ipa"
-#define IRQ_NAME_MODEM_QMI "modem" /* qmi interrupt name of sm7125/sm7150/sm8150，different platform may different.*/
-#define IRQ_NAME_MODEM_MODEM "qmi" /* different platform may different */
+#define IRQ_NAME_MODEM_QMI "qmi" /* dummy irq name */
+#define IRQ_NAME_MODEM_MODEM "modem"
 #define IRQ_NAME_WLAN_MSI "msi_wlan_irq"
 #define IRQ_NAME_WLAN_IPCC_DATA "WLAN"
 #define IRQ_NAME_ADSP "adsp"

@@ -326,7 +326,7 @@
 	qcom,vbatt_num = <1>;
 	//qcom,new_ui_warning_support;
 	qcom,ffc_support;
-
+	qcom,dual_ffc;
 	qcom,normal_vterm_hw_inc = <18>;
 	qcom,non_normal_vterm_hw_inc = <18>;
 

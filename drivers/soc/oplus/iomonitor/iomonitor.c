@@ -39,7 +39,7 @@
 #endif
 
 #define TMP_BUF_LEN 64
-#define ABNORMAL_LOG_NAME "/data/oppo_log/io_abnormal.log"
+#define ABNORMAL_LOG_NAME "/data/debugging/io_abnormal.log"
 #define ENTRY_END_TAG  "-------STR end-----\n"
 
 #define DATE_STR_LEN 128
@@ -369,7 +369,7 @@ void iomonitor_update_fs_stats(enum fs_event_type type, long delta)
 }
 EXPORT_SYMBOL(iomonitor_update_fs_stats);
 
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 extern bool test_task_ux(struct task_struct *task);
 #endif
 void iomonitor_record_iowait(struct task_struct *tsk, u64 delta_ms)
@@ -381,7 +381,7 @@ void iomonitor_record_iowait(struct task_struct *tsk, u64 delta_ms)
 		if (iomonitor_rt_need_record())
 			rt_record_handle();
 	}
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	/* first decide ux iowait */
 	if (test_task_ux(tsk) && delta_ms > UX_IO_WAIT_TIMEOUT)
 		abnormal_handle(UX_IO_WAIT, tsk->pid, delta_ms);
@@ -685,7 +685,7 @@ void iomonitor_record_io_history(const struct request *rq)
 	}
 }
 
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 static inline bool rq_is_ux(struct request *rq)
 {
 	return (rq->cmd_flags & REQ_UX);
@@ -702,7 +702,7 @@ void reqstats_record(struct request *req, unsigned int nr_bytes)
 {
 	u64 tg2d = 0, td2c = 0;
 	int index, rw, sync;
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	int isux;
 #endif
 	if (!req)
@@ -712,7 +712,7 @@ void reqstats_record(struct request *req, unsigned int nr_bytes)
 	tg2d = ktime_us_delta(req->req_td, req->req_tg) / 1000;
 	sync = rq_is_sync(req) ? 0 : 1;
 	index = sync;
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 	isux = rq_is_ux(req);
 	/* UX req */
 	if (!sync && isux) {

@@ -34,6 +34,9 @@
 #ifdef CONFIG_OF_RESERVED_MEM
 #include <linux/of_reserved_mem.h>
 #endif /* CONFIG_OF_RESERVED_MEM */
+#ifdef CONFIG_KSWAPD_DEBUG_STATISTICS
+#include <linux/math64.h>
+#endif
 
 #include "../../../../mm/slab.h"
 
@@ -47,6 +50,7 @@
 
 #define K(x) ((x) << (PAGE_SHIFT-10))
 extern unsigned long ion_total(void);
+
 static int lowmem_dbg_ram[] = {
 	0,
 	768 * 1024,	/* 3GB */
@@ -143,6 +147,81 @@ struct lowmem_dump_cfg {
 	void (*dump)(bool);
 	bool (*critical)(void);
 };
+
+#ifdef CONFIG_KSWAPD_DEBUG_STATISTICS
+#define NS_PER_MS 1000000
+#define KSWAPD_DEBUG_INFO_KBUF_LEN 4096
+static void dump_kswapd_debug_info(void)
+{
+	pg_data_t *pgdat;
+	int order;
+	struct kswapd_debug_entry *entry;
+
+	for_each_online_pgdat(pgdat) {
+		pr_info("Node %d kswapd has run %lu ms %lu times:\n",
+				pgdat->node_id,
+				div_u64(atomic_long_read(&pgdat->kswapd_running_ns), NS_PER_MS),
+				atomic_long_read(&pgdat->kswapd_running_times));
+
+		entry = pgdat->kswapd_debug;
+		for (order=0; order<=MAX_ORDER; order++)
+			pr_info("order %4d %12lu %12lu ms\n", order,
+					atomic_long_read(&entry[order].cnt),
+					div_u64(atomic_long_read(&entry[order].runtime_ns), NS_PER_MS));
+	}
+}
+
+ssize_t kswapd_debug_info_read(struct file *file, char __user *buffer,
+		size_t count, loff_t *off)
+{
+	pg_data_t *pgdat;
+	int order;
+	struct kswapd_debug_entry *entry;
+	int len = 0;
+	int end;
+	char* kbuf = (char*)vmalloc(KSWAPD_DEBUG_INFO_KBUF_LEN);
+
+	if (!kbuf)
+		return -ENOMEM;
+
+	for_each_online_pgdat(pgdat) {
+		len += scnprintf(kbuf + len, KSWAPD_DEBUG_INFO_KBUF_LEN - len,
+				"Node %d kswapd has run %lu ms %lu times:\n",
+				pgdat->node_id,
+				div_u64(atomic_long_read(&pgdat->kswapd_running_ns), NS_PER_MS),
+				atomic_long_read(&pgdat->kswapd_running_times));
+
+		entry = pgdat->kswapd_debug;
+		for (order=0; order<=MAX_ORDER; order++)
+			len += scnprintf(kbuf + len, KSWAPD_DEBUG_INFO_KBUF_LEN - len,
+					"order %3d %10lu %10lu ms\n", order,
+					atomic_long_read(&entry[order].cnt),
+					div_u64(atomic_long_read(&entry[order].runtime_ns), NS_PER_MS));
+
+	}
+
+	if (KSWAPD_DEBUG_INFO_KBUF_LEN == len)
+		end = KSWAPD_DEBUG_INFO_KBUF_LEN -1;
+	else
+		end = len;
+	if (kbuf[end] != '\n')
+		kbuf[end] = '\n';
+
+	if (len > *off)
+		len -= *off;
+	else
+		len = 0;
+
+	if (copy_to_user(buffer, kbuf + *off, (len < count ? len : count))) {
+		vfree(kbuf);
+		return -EFAULT;
+	}
+
+	vfree(kbuf);
+	*off += (len < count ? len : count);
+	return (len < count ? len : count);
+}
+#endif
 
 static long get_mem_usage_pages(enum mem_type type)
 {
@@ -410,11 +489,7 @@ static int dump_ion(bool verbose)
 	size_t total_orphaned_size = 0;
 	size_t total_size = 0;
 
-#ifdef OPLUS_FEATURE_MTK_ION_SEPARATE_LOCK
-	if (!down_read_trylock(&dev->client_lock)) {
-#else
 	if (!down_read_trylock(&dev->lock)) {
-#endif
 		return -1;
 	}
 	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
@@ -466,11 +541,7 @@ static int dump_ion(bool verbose)
 	pr_info("orphaned: %zu total: %zu\n",
 		total_orphaned_size, total_size);
 
-#ifdef OPLUS_FEATURE_MTK_ION_SEPARATE_LOCK
-	up_read(&dev->client_lock);
-#else
 	up_read(&dev->lock);
-#endif
 	return 0;
 }
 #else /* CONFIG_MTK_ION */
@@ -659,6 +730,9 @@ static void lowmem_dbg_dump(struct work_struct *work)
 		dump_mem_detail(i, critical ? true : pcfg->wms[i] < usage);
 		pr_info("dump [%s] end.\n", text);
 	}
+#ifdef CONFIG_KSWAPD_DEBUG_STATISTICS
+	dump_kswapd_debug_info();
+#endif
 	pr_info("dump end\n");
 	mutex_unlock(&lowmem_dump_mutex);
 }
@@ -787,4 +861,28 @@ static __init int oplus_lowmem_dbg_test_init(void)
 	return 0;
 }
 fs_initcall(oplus_lowmem_dbg_test_init);
+#endif
+
+#ifdef CONFIG_KSWAPD_DEBUG_STATISTICS
+static const struct file_operations kswapd_debug_operations = {
+	.read = kswapd_debug_info_read,
+};
+
+int kswapd_debug_init(struct proc_dir_entry *parent)
+{
+	struct proc_dir_entry *entry;
+
+	if (!parent) {
+		pr_warn("%s: parent is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	entry = proc_create("kswapd_debug", S_IRUGO, parent, &kswapd_debug_operations);
+	if (!entry) {
+		pr_warn("%s: create kswapd_debug failed.\n", __func__);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
 #endif

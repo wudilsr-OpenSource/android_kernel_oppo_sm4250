@@ -164,9 +164,10 @@ static struct wakeup_count_desc_t * const all_modules_bengal[] = {
  * so a conversion must be done.
  * [x][0] --> IPA_WS, [x][1] --> QMI_WS
  */
-static const char* const modem_report_exchange_bengal[][MODEM_REPORT_NUMBER] = {
+static const char * const modem_report_exchange_bengal[][MODEM_REPORT_NUMBER] = {
 	{IRQ_NAME_MODEM_IPA, IRQ_NAME_MODEM_QMI},
 	{NULL, NULL},
 };
 
 #endif /*__QCOM_PLATFORM_BENGAL_H__*/
+

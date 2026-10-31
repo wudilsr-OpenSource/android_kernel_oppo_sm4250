@@ -146,7 +146,7 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 			QUEUE_0*0x100 + 3 * 4;
 		readreg_val1 = cam_io_r_mb(base + reg_offset1);
 		CAM_DBG(CAM_CCI, "300 0x%x 30c 0x%x cci%d m0q0",
-			readreg_val, readreg_val1, cci_dev->soc_info.index); 
+			readreg_val, readreg_val1, cci_dev->soc_info.index);
 
 		spin_unlock_irqrestore(
 			&cci_dev->cci_master_info[MASTER_0].lock_q[QUEUE_0],
@@ -165,14 +165,14 @@ irqreturn_t cam_cci_irq(int irq_num, void *data)
 			complete(&cci_master_info->report_q[QUEUE_1]);
 			atomic_set(&cci_master_info->done_pending[QUEUE_1], 0);
 		}
-		reg_offset = DEBUG_MASTER_QUEUE_REG_START +  MASTER_0*0x200 + 
+		reg_offset = DEBUG_MASTER_QUEUE_REG_START +  MASTER_0*0x200 +
 			QUEUE_1*0x100;
 		readreg_val = cam_io_r_mb(base + reg_offset);
 		reg_offset1 = DEBUG_MASTER_QUEUE_REG_START +  MASTER_0*0x200 +
 			QUEUE_1*0x100 + 3 * 4;
 		readreg_val1 = cam_io_r_mb(base + reg_offset1);
 		CAM_DBG(CAM_CCI, "300 0x%x 30c 0x%x cci%d m0q1",
-		readreg_val, readreg_val1, cci_dev->soc_info.index); 
+		readreg_val, readreg_val1, cci_dev->soc_info.index);
 
 		spin_unlock_irqrestore(
 			&cci_dev->cci_master_info[MASTER_0].lock_q[QUEUE_1],

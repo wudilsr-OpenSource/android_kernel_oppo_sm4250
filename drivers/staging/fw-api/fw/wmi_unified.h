@@ -7085,23 +7085,6 @@ typedef enum {
      * will start operating after the STA connects to an AP.
      */
     WMI_PDEV_PARAM_SET_TXTD_START_TIMESTAMP,
-    /*
-     * Parameter to configure and enable/disable features for mesh usecases
-     * bit | config_mode
-     * -----------------
-     * 0 | Set to 1 to disable BSSID based spatial reuse.
-     * 1-31 | Reserved.
-     */
-    WMI_PDEV_PARAM_SET_MESH_PARAMS,
-
-    /* Param to enable low latency mode */
-    WMI_PDEV_PARAM_LOW_LATENCY_SCHED_MODE,
-
-    /* Param to enable per USERPD SSR - for MultiPD enabled chips */
-    WMI_PDEV_PARAM_MPD_USERPD_SSR,
-
-    /* Param to disable Hardware Assist feature */
-    WMI_PDEV_PARAM_DISABLE_HW_ASSIST,
 
 } WMI_PDEV_PARAM;
 

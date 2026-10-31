@@ -13,7 +13,6 @@
 #ifndef _OPLUS_DISPLAY_PRIVATE_API_H_
 #define _OPLUS_DISPLAY_PRIVATE_API_H_
 
-#include <linux/err.h>
 #include <linux/list.h>
 #include <linux/of.h>
 #include <linux/err.h>
@@ -35,4 +34,12 @@
 #include <linux/init.h>
 #include <drm/drm_mipi_dsi.h>
 #include "dsi_oplus_support.h"
+
+extern int oplus_onscreenfp_status;
+extern int oplus_display_mode;
+extern int oplus_dimlayer_bl_enable_v3_real;
+extern u32 oplus_last_backlight;
+
+int interpolate(int x, int xa, int xb, int ya, int yb);
+bool is_dsi_panel(struct drm_crtc *crtc);
 #endif /* _OPLUS_DISPLAY_PRIVATE_API_H_ */

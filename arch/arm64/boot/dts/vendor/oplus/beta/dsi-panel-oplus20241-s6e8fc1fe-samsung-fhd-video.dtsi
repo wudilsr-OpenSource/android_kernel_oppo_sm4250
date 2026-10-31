@@ -649,6 +649,7 @@
 &dsi_s6e8fc1fe_samsung_video {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,bl-update-flag = "delay_until_first_frame";
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-normal-max-level = <2047>;
 	qcom,mdss-dsi-bl-max-level = <4095>;

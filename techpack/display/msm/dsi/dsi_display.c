@@ -29,6 +29,9 @@
 #include <linux/msm_drm_notify.h>
 #include <linux/notifier.h>
 
+#include "oplus_aod.h"
+#include "oplus_display_panel_common.h"
+
 extern int msm_drm_notifier_call_chain(unsigned long val, void *v);
 extern int oplus_dsi_update_seed_mode(void);
 extern int oplus_dsi_update_spr_mode(void);
@@ -36,9 +39,6 @@ extern int oplus_dsi_update_dynamic_osc_clock(void);
 /* Don't panic if smmu fault*/
 extern int sde_kms_set_smmu_no_fatal_faults(struct drm_device *drm);
 extern int oplus_set_display_vendor(struct dsi_display *display);
-extern int oplus_update_aod_light_mode_unlock(struct dsi_panel *panel);
-extern char *saved_command_line;
-
 
 #ifdef OPLUS_BUG_STABILITY
 __attribute__((weak)) void sec_refresh_switch(int fps)
@@ -51,10 +51,6 @@ __attribute__((weak)) void syna_tcm_refresh_switch(int fps)
 }
 #endif /* OPLUS_BUG_STABILITY */
 
-/* Add for solve sau issue*/
-extern int lcd_closebl_flag;
-/* Add for fingerprint silence*/
-extern int lcd_closebl_flag_fp;
 /* Add for ffl feature */
 extern bool oplus_ffl_trigger_finish;
 int vid_cmd_mode_change = 0;
@@ -4408,17 +4404,7 @@ static void _dsi_display_calc_pipe_delay(struct dsi_display *display,
 
 	cfg = &(m_ctrl->phy->cfg);
 
-	if (strstr(saved_command_line, "mdss_s6e8fc1_samsung_video")
-		|| strstr(saved_command_line, "mdss_s6e8fc1fe_samsung_video")
-		|| strstr(saved_command_line, "mdss_s6e8fc1fe_new_samsung_video")) {
-		esc_clk_rate_hz = dsi_ctrl->clk_freq.esc_clk_rate;
-		pclk_to_esc_ratio = (dsi_ctrl->clk_freq.pix_clk_rate /
-				esc_clk_rate_hz);
-		byte_to_esc_ratio = (dsi_ctrl->clk_freq.byte_clk_rate /
-				esc_clk_rate_hz);
-		hr_bit_to_esc_ratio = ((dsi_ctrl->clk_freq.byte_clk_rate * 4) /
-				esc_clk_rate_hz);
-	} else {
+	if (is_soda_panel()) {
 		esc_clk_rate_hz = dsi_ctrl->clk_freq.esc_clk_rate * 1000;
 		pclk_to_esc_ratio = ((dsi_ctrl->clk_freq.pix_clk_rate * 1000) /
 				esc_clk_rate_hz);
@@ -4426,6 +4412,14 @@ static void _dsi_display_calc_pipe_delay(struct dsi_display *display,
 				esc_clk_rate_hz);
 		hr_bit_to_esc_ratio = ((dsi_ctrl->clk_freq.byte_clk_rate * 4 * 1000) /
 				esc_clk_rate_hz);
+	} else {
+		esc_clk_rate_hz = dsi_ctrl->clk_freq.esc_clk_rate;
+		pclk_to_esc_ratio = (dsi_ctrl->clk_freq.pix_clk_rate /
+				     esc_clk_rate_hz);
+		byte_to_esc_ratio = (dsi_ctrl->clk_freq.byte_clk_rate /
+				     esc_clk_rate_hz);
+		hr_bit_to_esc_ratio = ((dsi_ctrl->clk_freq.byte_clk_rate * 4) /
+						esc_clk_rate_hz);
 	}
 
 	hsync_period = DSI_H_TOTAL_DSC(&mode->timing);
@@ -4451,33 +4445,30 @@ static void _dsi_display_calc_pipe_delay(struct dsi_display *display,
 			  ((cfg->timing.lane_v3[4] >> 1) + 1)) /
 			 hr_bit_to_esc_ratio);
 
-	if (strstr(saved_command_line, "mdss_s6e8fc1_samsung_video")
-		|| strstr(saved_command_line, "mdss_s6e8fc1fe_samsung_video")
-		|| strstr(saved_command_line, "mdss_s6e8fc1fe_new_samsung_video")) {
-	/*
-	 * 100us pll delay recommended for phy ver 2.0 and 3.0
-	 * 25us pll delay recommended for phy ver 4.0
-	 */
-		DSI_INFO("DSI bit clk change for rum\n");
+	if (is_soda_panel()) {
+		/* 130 us pll delay recommended by h/w doc */
+		DSI_INFO("DSI bit clk change for soda\n");
+		delay->pll_delay = ((130 * esc_clk_rate_hz) / 1000000) * 2;
+	} else {
+		/*
+		 * 100us pll delay recommended for phy ver 2.0 and 3.0
+		 * 25us pll delay recommended for phy ver 4.0
+		 */
 		phy_ver = dsi_phy_get_version(m_ctrl->phy);
-#ifndef OPLUS_BUG_STABILITY
+	#ifndef OPLUS_BUG_STABILITY
 		if (phy_ver <= DSI_PHY_VERSION_3_0)
 			delay->pll_delay = 100;
 		else
 			delay->pll_delay = 25;
-#else
+	#else
 		if (phy_ver <= DSI_PHY_VERSION_3_0)
 			delay->pll_delay = 40;
 		else
 			delay->pll_delay = 25;
-#endif /*OPLUS_BUG_STABILITY*/
-
-		delay->pll_delay = ((delay->pll_delay * esc_clk_rate_hz) / 1000000);
-	} else {
-		/* 130 us pll delay recommended by h/w doc */
-		DSI_INFO("DSI bit clk change for soda\n");
-		delay->pll_delay = ((130 * esc_clk_rate_hz) / 1000000) * 2;
+	#endif /*OPLUS_BUG_STABILITY*/
 	}
+
+	delay->pll_delay = ((delay->pll_delay * esc_clk_rate_hz) / 1000000);
 }
 
 /*
@@ -5850,6 +5841,10 @@ int dsi_display_dev_remove(struct platform_device *pdev)
 	}
 
 	display = platform_get_drvdata(pdev);
+	if (!display || !display->panel_node) {
+		DSI_ERR("invalid display");
+		return -EINVAL;
+	}
 
 	/* decrement ref count */
 	of_node_put(display->panel_node);
@@ -7060,8 +7055,17 @@ int dsi_display_validate_mode_change(struct dsi_display *display,
 					goto error;
 				}
 
+				#ifndef OPLUS_BUG_STABILITY
 				adj_mode->dsi_mode_flags |=
 						DSI_MODE_FLAG_DYN_CLK;
+				#else
+				if (cur_mode->timing.refresh_rate != adj_mode->timing.refresh_rate) {
+					pr_err("dfps and dyn clk concurrent, skip dyn clk!\n");
+				} else {
+					adj_mode->dsi_mode_flags |= DSI_MODE_FLAG_DYN_CLK;
+				}
+				#endif /*OPLUS_BUG_STABILITY*/
+
 				SDE_EVT32(SDE_EVTLOG_FUNC_CASE2,
 					cur_mode->pixel_clk_khz,
 					adj_mode->pixel_clk_khz);

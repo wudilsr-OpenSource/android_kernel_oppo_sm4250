@@ -1,7 +1,16 @@
-// SPDX-License-Identifier: GPL-2.0-only
-/*
- * Copyright (C) 2018-2020 Oplus. All rights reserved.
- */
+/************************************************************************************
+** File: -
+** VENDOR_EDIT
+** Copyright (C), 2020-2025, OPLUS Mobile Comm Corp., Ltd
+**
+** Description:
+**     add audio extend driver
+** Version: 1.0
+** --------------------------- Revision History: --------------------------------
+**               <author>                                <date>          <desc>
+**
+************************************************************************************/
+
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/of_device.h>

@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
+
 #include <linux/delay.h>
 #include <linux/wait.h>
 #include <linux/timer.h>
@@ -12,9 +17,9 @@
 
 
 enum {
-  KEY_RELEASE,
-  KEY_PRESS,
-  KEY_PRESS_RELEASE
+    KEY_RELEASE,
+    KEY_PRESS,
+    KEY_PRESS_RELEASE
 };
 
 #define DISABLE   0
@@ -25,8 +30,8 @@ static DECLARE_WAIT_QUEUE_HEAD(nav_input_wait);
 static unsigned int nav_input_sig;
 static DEFINE_MUTEX(driver_mode_lock);
 struct navi_cmd_struct {
-  char cmd;
-  struct list_head list;
+    char cmd;
+    struct list_head list;
 };
 
 struct navi_cmd_struct cmd_list;
@@ -148,9 +153,9 @@ static unsigned int prev_keycode;
  * @ ENABLE_TRANSLATED_LONG_TOUCH
  *     ENABLE/DISABLE : enable/disable long-touch event.
  */
-#define ENABLE_TRANSLATED_SINGLE_CLICK	ENABLE
+#define ENABLE_TRANSLATED_SINGLE_CLICK  ENABLE
 #define ENABLE_TRANSLATED_DOUBLE_CLICK  DISABLE
-#define ENABLE_TRANSLATED_LONG_TOUCH  DISABLE
+#define ENABLE_TRANSLATED_LONG_TOUCH    DISABLE
 
 
 /*
@@ -275,14 +280,14 @@ struct navi_struct {
 };
 
 enum navi_event {
-  NAVI_EVENT_CANCEL,
-  NAVI_EVENT_ON,
-  NAVI_EVENT_OFF,
-  NAVI_EVENT_SWIPE,
-  NAVI_EVENT_UP,
-  NAVI_EVENT_DOWN,
-  NAVI_EVENT_RIGHT,
-  NAVI_EVENT_LEFT
+    NAVI_EVENT_CANCEL,
+    NAVI_EVENT_ON,
+    NAVI_EVENT_OFF,
+    NAVI_EVENT_SWIPE,
+    NAVI_EVENT_UP,
+    NAVI_EVENT_DOWN,
+    NAVI_EVENT_RIGHT,
+    NAVI_EVENT_LEFT
 };
 #if ENABLE_TRANSLATED_LONG_TOUCH
 static struct timer_list long_touch_timer;
@@ -297,61 +302,61 @@ static unsigned int g_SingleClick;
 /* Set event bits according to what events we would generate */
 void init_event_enable(struct egistec_data *egistec)
 {
-  set_bit(EV_KEY, egistec->input_dev->evbit);
-  set_bit(EV_SYN, egistec->input_dev->evbit);
-  set_bit(210, egistec->input_dev->keybit);
+    set_bit(EV_KEY, egistec->input_dev->evbit);
+    set_bit(EV_SYN, egistec->input_dev->evbit);
+    set_bit(210, egistec->input_dev->keybit);
 #if TRANSLATED_COMMAND
-  set_bit(KEYEVENT_ON, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_OFF, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_CLICK, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_DOUBLECLICK, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_LONGTOUCH, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_UP, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_DOWN, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_RIGHT, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_LEFT, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_ON, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_OFF, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_CLICK, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_DOUBLECLICK, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_LONGTOUCH, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_UP, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_DOWN, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_RIGHT, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_LEFT, egistec->input_dev->keybit);
 #else
-  set_bit(KEYEVENT_CANCEL, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_ON, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_OFF, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_UP, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_DOWN, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_RIGHT, egistec->input_dev->keybit);
-  set_bit(KEYEVENT_LEFT, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_CANCEL, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_ON, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_OFF, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_UP, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_DOWN, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_RIGHT, egistec->input_dev->keybit);
+    set_bit(KEYEVENT_LEFT, egistec->input_dev->keybit);
 #endif
 }
 
 
 static void send_key_event(struct egistec_data *egistec, unsigned int code, int value)
 {
-  struct egistec_data *obj = egistec;
+    struct egistec_data *obj = egistec;
 
-  if (value == KEY_PRESS_RELEASE) {
-    input_report_key(obj->input_dev, code, 1);  /* 1 is press */
-    input_sync(obj->input_dev);
-    input_report_key(obj->input_dev, code, 0);  /* 0 is release */
-    input_sync(obj->input_dev);
+    if (value == KEY_PRESS_RELEASE) {
+        input_report_key(obj->input_dev, code, 1);  /* 1 is press */
+        input_sync(obj->input_dev);
+        input_report_key(obj->input_dev, code, 0);  /* 0 is release */
+        input_sync(obj->input_dev);
 #if ENABLE_FINGER_DOWN_UP
-    prev_keycode = code;
+        prev_keycode = code;
 #endif
-  } else {
-    input_report_key(obj->input_dev, code, value);
-    input_sync(obj->input_dev);
-  }
+    } else {
+        input_report_key(obj->input_dev, code, value);
+        input_sync(obj->input_dev);
+    }
 
-  DEBUG_PRINT("Egis navigation driver, send key event: %d, action: %d\n", code, value);
+    DEBUG_PRINT("Egis navigation driver, send key event: %d, action: %d\n", code, value);
 }
 
 #if ENABLE_TRANSLATED_LONG_TOUCH
 static void long_touch_handler(unsigned long arg)
 {
-  struct egistec_data *egistec = (struct egistec_data *)arg;
+    struct egistec_data *egistec = (struct egistec_data *)arg;
 
-  if (g_KeyEventRaised == false) {
-    g_KeyEventRaised = true;
-    /* Long touch event */
-    send_key_event(egistec, KEYEVENT_LONGTOUCH, KEYEVENT_LONGTOUCH_ACTION);
-  }
+    if (g_KeyEventRaised == false) {
+        g_KeyEventRaised = true;
+        /* Long touch event */
+        send_key_event(egistec, KEYEVENT_LONGTOUCH, KEYEVENT_LONGTOUCH_ACTION);
+    }
 }
 #endif
 
@@ -359,200 +364,200 @@ static void long_touch_handler(unsigned long arg)
 #if TRANSLATED_COMMAND
 void translated_command_converter(char cmd, struct egistec_data *egistec)
 {
-  DEBUG_PRINT("Egis navigation driver, translated cmd: %d\n", cmd);
+    DEBUG_PRINT("Egis navigation driver, translated cmd: %d\n", cmd);
 
-  switch (cmd) {
-  case NAVI_EVENT_CANCEL:
-    g_KeyEventRaised = true;
-    g_DoubleClickJiffies = 0;
-    g_SingleClickJiffies = 0;
-    g_SingleClick = 0;
+    switch (cmd) {
+    case NAVI_EVENT_CANCEL:
+        g_KeyEventRaised = true;
+        g_DoubleClickJiffies = 0;
+        g_SingleClickJiffies = 0;
+        g_SingleClick = 0;
 #if ENABLE_TRANSLATED_LONG_TOUCH
-    del_timer(&long_touch_timer);
+        del_timer(&long_touch_timer);
 #endif
-    break;
+        break;
 
-  case NAVI_EVENT_ON: /* finger down */
-    g_KeyEventRaised = false;
+    case NAVI_EVENT_ON: /* finger down */
+        g_KeyEventRaised = false;
 #if ENABLE_TRANSLATED_SINGLE_CLICK
-    g_SingleClickJiffies = jiffies;
+        g_SingleClickJiffies = jiffies;
 #endif
 
 #if ENABLE_FINGER_DOWN_UP
-    send_key_event(egistec, KEYEVENT_ON, KEYEVENT_ON_ACTION);
+        send_key_event(egistec, KEYEVENT_ON, KEYEVENT_ON_ACTION);
 #endif
 #if ENABLE_TRANSLATED_LONG_TOUCH
-    long_touch_timer.data = (unsigned long)egistec;
-    mod_timer(&long_touch_timer, jiffies + (HZ * LONGTOUCH_INTERVAL / 1000));
+        long_touch_timer.data = (unsigned long)egistec;
+        mod_timer(&long_touch_timer, jiffies + (HZ * LONGTOUCH_INTERVAL / 1000));
 #endif
-    break;
+        break;
 
-  case NAVI_EVENT_OFF: /* finger up */
-    if (g_KeyEventRaised == false) {
-      g_KeyEventRaised = true;
-      pr_info("Egis : g_SingleClick %u tap interval =%u double tap interval = %u time= %u",
-        g_SingleClick, jiffies_to_msecs(jiffies - g_SingleClickJiffies),
-        jiffies_to_msecs(jiffies - g_DoubleClickJiffies), jiffies_to_msecs(jiffies));
+    case NAVI_EVENT_OFF: /* finger up */
+        if (g_KeyEventRaised == false) {
+            g_KeyEventRaised = true;
+            pr_info("Egis : g_SingleClick %u tap interval =%u double tap interval = %u time= %u",
+            g_SingleClick, jiffies_to_msecs(jiffies - g_SingleClickJiffies),
+            jiffies_to_msecs(jiffies - g_DoubleClickJiffies), jiffies_to_msecs(jiffies));
 #if ENABLE_TRANSLATED_SINGLE_CLICK
-      if ((jiffies - g_SingleClickJiffies) < (HZ * SINGLECLICK_INTERVAL / 1000)) {
-        /* Click event */
-        send_key_event(egistec, KEYEVENT_CLICK, KEYEVENT_CLICK_ACTION);
-        g_SingleClick++;
-        if (g_SingleClick == 1) {
-          g_DoubleClickJiffies = jiffies;
-        }
-      }
+            if ((jiffies - g_SingleClickJiffies) < (HZ * SINGLECLICK_INTERVAL / 1000)) {
+                /* Click event */
+                send_key_event(egistec, KEYEVENT_CLICK, KEYEVENT_CLICK_ACTION);
+                g_SingleClick++;
+                if (g_SingleClick == 1) {
+                    g_DoubleClickJiffies = jiffies;
+                }
+            }
 #endif
 #if ENABLE_TRANSLATED_DOUBLE_CLICK
-      if (g_SingleClick >= 2) {
-        if ((jiffies - g_DoubleClickJiffies) < (HZ * (SINGLECLICK_INTERVAL+DOUBLECLICK_INTERVAL) / 1000)) {
-          /* Double click event */
-          send_key_event(egistec, KEYEVENT_DOUBLECLICK, KEYEVENT_DOUBLECLICK_ACTION);
-          g_SingleClick = 0;
-        } else {
-          g_SingleClick = 1;
-          g_DoubleClickJiffies = jiffies;
+            if (g_SingleClick >= 2) {
+                if ((jiffies - g_DoubleClickJiffies) < (HZ * (SINGLECLICK_INTERVAL+DOUBLECLICK_INTERVAL) / 1000)) {
+                    /* Double click event */
+                    send_key_event(egistec, KEYEVENT_DOUBLECLICK, KEYEVENT_DOUBLECLICK_ACTION);
+                    g_SingleClick = 0;
+                } else {
+                    g_SingleClick = 1;
+                    g_DoubleClickJiffies = jiffies;
+                }
+            }
+#endif
+
+#if ENABLE_FINGER_DOWN_UP
+            send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
+#endif
         }
-
-      }
-#endif
-
 #if ENABLE_FINGER_DOWN_UP
-      send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
-#endif
-    }
-#if ENABLE_FINGER_DOWN_UP
-    else  {
-      if (prev_keycode == KEYEVENT_LONGTOUCH)
-        send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
-    }
+        else  {
+            if (prev_keycode == KEYEVENT_LONGTOUCH) {
+                send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
+            }
+        }
 #endif
 #if ENABLE_TRANSLATED_LONG_TOUCH
-    del_timer(&long_touch_timer);
+        del_timer(&long_touch_timer);
 #endif
-    break;
+        break;
 
-  case NAVI_EVENT_UP:
-    if (g_KeyEventRaised == false) {
-      g_KeyEventRaised = true;
+    case NAVI_EVENT_UP:
+        if (g_KeyEventRaised == false) {
+            g_KeyEventRaised = true;
 #if ENABLE_SWIPE_UP_DOWN
-      send_key_event(egistec, KEYEVENT_UP, KEYEVENT_UP_ACTION);
-      send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
+            send_key_event(egistec, KEYEVENT_UP, KEYEVENT_UP_ACTION);
+            send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
 
 #endif
-    }
-    break;
+        }
+        break;
 
-  case NAVI_EVENT_DOWN:
+    case NAVI_EVENT_DOWN:
 
-    if (g_KeyEventRaised == false) {
-      g_KeyEventRaised = true;
+        if (g_KeyEventRaised == false) {
+            g_KeyEventRaised = true;
 #if ENABLE_SWIPE_UP_DOWN
-      send_key_event(egistec, KEYEVENT_DOWN, KEYEVENT_DOWN_ACTION);
-      send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
+            send_key_event(egistec, KEYEVENT_DOWN, KEYEVENT_DOWN_ACTION);
+            send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
 
 #endif
-    }
+        }
 
-  break;
+        break;
 
-  case NAVI_EVENT_RIGHT:
+    case NAVI_EVENT_RIGHT:
 
     #if ENABLE_SWIPE_LEFT_RIGHT
     if (g_KeyEventRaised == false) {
-      g_KeyEventRaised = true;
-      send_key_event(egistec, KEYEVENT_RIGHT, KEYEVENT_RIGHT_ACTION);
-      send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
+        g_KeyEventRaised = true;
+        send_key_event(egistec, KEYEVENT_RIGHT, KEYEVENT_RIGHT_ACTION);
+        send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
     }
     #endif
 
     break;
 
-  case NAVI_EVENT_LEFT:
+    case NAVI_EVENT_LEFT:
 
     #if ENABLE_SWIPE_LEFT_RIGHT
     if (g_KeyEventRaised == false) {
-      g_KeyEventRaised = true;
-      send_key_event(egistec, KEYEVENT_LEFT, KEYEVENT_LEFT_ACTION);
-      send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
-
+        g_KeyEventRaised = true;
+        send_key_event(egistec, KEYEVENT_LEFT, KEYEVENT_LEFT_ACTION);
+        send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
     }
     #endif
 
     break;
 
-  default:
-    pr_err("Egis navigation driver, cmd not match\n");
-  }
+    default:
+        pr_err("Egis navigation driver, cmd not match\n");
+    }
 }
 
 #else /* straight command (not define TRANSLATED_COMMAND) */
 
 void straight_command_converter(char cmd, struct egistec_data *egistec)
 {
-  DEBUG_PRINT("Egis navigation driver, straight cmd: %d\n", cmd);
+    DEBUG_PRINT("Egis navigation driver, straight cmd: %d\n", cmd);
 
-  switch (cmd) {
-  case NAVI_EVENT_CANCEL:
+    switch (cmd) {
+    case NAVI_EVENT_CANCEL:
 
 #if ENABLE_STRAIGHT_CANCEL
-    send_key_event(egistec, KEYEVENT_CANCEL, KEYEVENT_CANCEL_ACTION);
+        send_key_event(egistec, KEYEVENT_CANCEL, KEYEVENT_CANCEL_ACTION);
 #endif
 
     break;
 
-  case NAVI_EVENT_ON:
+    case NAVI_EVENT_ON:
 
 #if ENABLE_STRAIGHT_ON
-    send_key_event(egistec, KEYEVENT_ON, KEYEVENT_ON_ACTION);
+        send_key_event(egistec, KEYEVENT_ON, KEYEVENT_ON_ACTION);
 #endif
 
     break;
 
-  case NAVI_EVENT_OFF:
+    case NAVI_EVENT_OFF:
 
 #if ENABLE_STRAIGHT_OFF
-    send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
+        send_key_event(egistec, KEYEVENT_OFF, KEYEVENT_OFF_ACTION);
 #endif
 
     break;
 
-  case NAVI_EVENT_UP:
+    case NAVI_EVENT_UP:
         send_key_event(egistec, 210, KEYEVENT_UP_ACTION);
 #if ENABLE_SWIPE_UP_DOWN
-    send_key_event(egistec, KEYEVENT_UP, KEYEVENT_UP_ACTION);
+        send_key_event(egistec, KEYEVENT_UP, KEYEVENT_UP_ACTION);
 #endif
 
     break;
 
-  case NAVI_EVENT_DOWN:
-      send_key_event(egistec, 210, KEYEVENT_DOWN_ACTION);
+    case NAVI_EVENT_DOWN:
+        send_key_event(egistec, 210, KEYEVENT_DOWN_ACTION);
 
 #if ENABLE_SWIPE_UP_DOWN
-    send_key_event(egistec, KEYEVENT_DOWN, KEYEVENT_DOWN_ACTION);
+        send_key_event(egistec, KEYEVENT_DOWN, KEYEVENT_DOWN_ACTION);
 #endif
 
     break;
 
-  case NAVI_EVENT_RIGHT:
+    case NAVI_EVENT_RIGHT:
 
 #if ENABLE_SWIPE_LEFT_RIGHT
-    send_key_event(egistec, KEYEVENT_RIGHT, KEYEVENT_RIGHT_ACTION);
+        send_key_event(egistec, KEYEVENT_RIGHT, KEYEVENT_RIGHT_ACTION);
 #endif
 
     break;
 
-  case NAVI_EVENT_LEFT:
+    case NAVI_EVENT_LEFT:
 
 #if ENABLE_SWIPE_LEFT_RIGHT
-    send_key_event(egistec, KEYEVENT_LEFT, KEYEVENT_LEFT_ACTION);
+        send_key_event(egistec, KEYEVENT_LEFT, KEYEVENT_LEFT_ACTION);
 #endif
 
     break;
 
-  default:
-    pr_err("Egis navigation driver, cmd not match\n");
-  }
+    default:
+        pr_err("Egis navigation driver, cmd not match\n");
+    break;
+    }
 }
 
 #endif  /* end of TRANSLATED_COMMAND */
@@ -562,70 +567,73 @@ void navi_operator(struct work_struct *work)
     struct navi_struct *command = container_of(work, struct navi_struct, workq);
 
 #if TRANSLATED_COMMAND
-  translated_command_converter(command->cmd, command->egistec);
+    translated_command_converter(command->cmd, command->egistec);
 #else
-  straight_command_converter(command->cmd, command->egistec);
+    straight_command_converter(command->cmd, command->egistec);
 
 #endif
 }
 
 static ssize_t navigation_event_func(struct device *dev,
-  struct device_attribute *attr, const char *buf, size_t count)
+    struct device_attribute *attr, const char *buf, size_t count)
 {
-  struct egistec_data *egistec = dev_get_drvdata(dev);
-  struct navi_cmd_struct *tempcmd;
-  DEBUG_PRINT("Egis navigation driver, %s echo :'%d'\n", __func__, *buf);
+    struct egistec_data *egistec = dev_get_drvdata(dev);
+    struct navi_cmd_struct *tempcmd;
+    DEBUG_PRINT("Egis navigation driver, %s echo :'%d'\n", __func__, *buf);
 
-  if (egistec) {
-    dev_dbg(&egistec->spi->dev, "%s spi_show\n", __func__);
-    if (egistec->spi) {
-      dev_dbg(&egistec->spi->dev, "%s spi show\n", __func__);
+    if (egistec) {
+        dev_dbg(&egistec->spi->dev, "%s spi_show\n", __func__);
+        if (egistec->spi) {
+            dev_dbg(&egistec->spi->dev, "%s spi show\n", __func__);
+        }
+    } else {
+        pr_err("Egis navigation driver, egistec is NULL\n");
+        return -1;
     }
-  } else
-    pr_err("Egis navigation driver, egistec is NULL\n");
-
-  if (egistec->input_dev == NULL)
-    pr_err("Egis navigation driver, egistec->input_dev is NULL\n");
-  tempcmd = kmalloc(sizeof(*tempcmd), GFP_KERNEL);
-  if (tempcmd != NULL) {
-    mutex_lock(&driver_mode_lock);
-    tempcmd->cmd = *buf;
-    list_add_tail(&tempcmd->list, &cmd_list.list);
-    nav_input_sig = 1;
-    mutex_unlock(&driver_mode_lock);
-    wake_up_interruptible(&nav_input_wait);
-  } else {
-    pr_err("navigation_event_func kmalloc failed\n");
-
-  }
-  return count;
+    if (egistec->input_dev == NULL) {
+        pr_err("Egis navigation driver, egistec->input_dev is NULL\n");
+        return -1;
+    }
+    tempcmd = kmalloc(sizeof(*tempcmd), GFP_KERNEL);
+    if (tempcmd != NULL) {
+        mutex_lock(&driver_mode_lock);
+        tempcmd->cmd = *buf;
+        list_add_tail(&tempcmd->list, &cmd_list.list);
+        nav_input_sig = 1;
+        mutex_unlock(&driver_mode_lock);
+        wake_up_interruptible(&nav_input_wait);
+    } else {
+        pr_err("navigation_event_func kmalloc failed\n");
+        return -1;
+    }
+    return count;
 }
 static DEVICE_ATTR(navigation_event, S_IWUSR, NULL, navigation_event_func);
 
 static ssize_t property_navigation_enable_set(struct device *dev,
     struct device_attribute *attr, const char *buf, size_t count)
 {
-  struct egistec_data *egistec = dev_get_drvdata(dev);
-  pr_err("Egis navigation driver, %s echo :'%d'\n", __func__, *buf);
+    struct egistec_data *egistec = dev_get_drvdata(dev);
+    pr_err("Egis navigation driver, %s echo :'%d'\n", __func__, *buf);
 
-  if (!strncmp(buf, "enable", strlen("enable")))  {
-    egistec->property_navigation_enable = 1;
-  } else if (!strncmp(buf, "disable", strlen("disable")))  {
-    egistec->property_navigation_enable = 0;
-  } else {
-    pr_err("strcmp not match\n");
-  }
-  return count;
+    if (!strncmp(buf, "enable", strlen("enable")))  {
+        egistec->property_navigation_enable = 1;
+    } else if (!strncmp(buf, "disable", strlen("disable")))  {
+        egistec->property_navigation_enable = 0;
+    } else {
+        pr_err("strcmp not match\n");
+    }
+    return count;
 }
 
 static ssize_t property_navigation_enable_get(struct device *dev,
     struct device_attribute *attr, char *buf)
 {
-  struct egistec_data *egistec = dev_get_drvdata(dev);
-  DEBUG_PRINT("Egis navigation driver, %s echo :'%d'\n", __func__, *buf);
+    struct egistec_data *egistec = dev_get_drvdata(dev);
+    DEBUG_PRINT("Egis navigation driver, %s echo :'%d'\n", __func__, *buf);
 
-  return scnprintf(buf, PAGE_SIZE, "%s",
-      egistec->property_navigation_enable ? "enable":"disable");
+    return scnprintf(buf, PAGE_SIZE, "%s",
+        egistec->property_navigation_enable ? "enable":"disable");
 }
 static DEVICE_ATTR(navigation_enable, S_IRUSR|S_IWUSR,
         property_navigation_enable_get, property_navigation_enable_set);
@@ -636,140 +644,139 @@ static DEVICE_ATTR(navigation_enable, S_IRUSR|S_IWUSR,
  *  Sysfs node creation
  */
 static struct attribute *attributes[] = {
-  &dev_attr_navigation_event.attr,
-  &dev_attr_navigation_enable.attr,
-  NULL
+    &dev_attr_navigation_event.attr,
+    &dev_attr_navigation_enable.attr,
+    NULL
 };
 static const struct attribute_group attribute_group = {
-  .attrs = attributes,
+    .attrs = attributes,
 };
 
 
 /*-------------------------------------------------------------------------*/
 static int nav_input_thread(void *et_spi)
 {
-  struct egistec_data *egistec = et_spi;
-  struct navi_cmd_struct *tempcmd, *acmd;
+    struct egistec_data *egistec = et_spi;
+    struct navi_cmd_struct *tempcmd, *acmd;
 
-  set_user_nice(current, -20);
-  DEBUG_PRINT("nav_input_thread enter\n");
+    //set_user_nice(current, -20);
+    DEBUG_PRINT("nav_input_thread enter\n");
 
-  while (1) {
-    wait_event_interruptible(nav_input_wait,
-      nav_input_sig || kthread_should_stop());
-    mutex_lock(&driver_mode_lock);
-    list_for_each_entry_safe(acmd, tempcmd, &cmd_list.list, list) {
-      translated_command_converter(acmd->cmd, egistec);
-      list_del(&acmd->list);
-      kfree(acmd);
+    while (1) {
+        wait_event_interruptible(nav_input_wait,
+            nav_input_sig || kthread_should_stop());
+        mutex_lock(&driver_mode_lock);
+        list_for_each_entry_safe(acmd, tempcmd, &cmd_list.list, list) {
+            translated_command_converter(acmd->cmd, egistec);
+            list_del(&acmd->list);
+            kfree(acmd);
+        }
+        nav_input_sig = 0;
+        mutex_unlock(&driver_mode_lock);
+        if (kthread_should_stop()) {
+            break;
+        }
     }
-    nav_input_sig = 0;
-    mutex_unlock(&driver_mode_lock);
-    if (kthread_should_stop())
-      break;
-  }
 
+    DEBUG_PRINT("nav_input_thread exit\n");
 
-  DEBUG_PRINT("nav_input_thread exit\n");
-
-  return 0;
+    return 0;
 }
 
 
 void uinput_egis_init(struct egistec_data *egistec)
 {
-  int error = 0;
+    int error = 0;
 
-  DEBUG_PRINT("Egis navigation driver, %s\n", __func__);
+    DEBUG_PRINT("Egis navigation driver, %s\n", __func__);
 
-  egistec->property_navigation_enable = PROPERTY_NAVIGATION_ENABLE_DEFAULT ;
-  egistec->input_dev = input_allocate_device();
+    egistec->property_navigation_enable = PROPERTY_NAVIGATION_ENABLE_DEFAULT;
+    egistec->input_dev = input_allocate_device();
 
-  if (!egistec->input_dev) {
-    pr_err("Egis navigation driver, Input_allocate_device failed.\n");
-    return;
-  }
+    if (!egistec->input_dev) {
+        pr_err("Egis navigation driver, Input_allocate_device failed.\n");
+        return;
+    }
 
 
-  INIT_LIST_HEAD(&cmd_list.list);
-  nav_input_sig = 0;
-  if (!nav_kthread) {
-    nav_kthread = kthread_run(nav_input_thread,
-      (void *)egistec, "nav_thread");
-  }
+    INIT_LIST_HEAD(&cmd_list.list);
+    nav_input_sig = 0;
+    if (!nav_kthread) {
+        nav_kthread = kthread_run(nav_input_thread,
+        (void *)egistec, "nav_thread");
+    }
 #if ENABLE_TRANSLATED_LONG_TOUCH
-  init_timer(&long_touch_timer);
-  long_touch_timer.function = long_touch_handler;
+    init_timer(&long_touch_timer);
+    long_touch_timer.function = long_touch_handler;
 #endif
 
 
-  egistec->input_dev->name = "uinput-egis";
+    egistec->input_dev->name = "uinput-egis";
 
-  init_event_enable(egistec);
+    init_event_enable(egistec);
 
-  /* Register the input device */
-  error = input_register_device(egistec->input_dev);
-  if (error) {
-    pr_err("Egis navigation driver, Input_register_device failed.\n");
-    input_free_device(egistec->input_dev);
-    egistec->input_dev = NULL;
-  }
-  g_DoubleClickJiffies = 0;
-  g_SingleClickJiffies = 0;
+    /* Register the input device */
+    error = input_register_device(egistec->input_dev);
+    if (error) {
+        pr_err("Egis navigation driver, Input_register_device failed.\n");
+        input_free_device(egistec->input_dev);
+        egistec->input_dev = NULL;
+    }
+    g_DoubleClickJiffies = 0;
+    g_SingleClickJiffies = 0;
 }
 
 void uinput_egis_destroy(struct egistec_data *egistec)
 {
-  DEBUG_PRINT("Egis navigation driver, %s\n", __func__);
-
+    DEBUG_PRINT("Egis navigation driver, %s\n", __func__);
 
 #if ENABLE_TRANSLATED_LONG_TOUCH
-  del_timer(&long_touch_timer);
+    del_timer(&long_touch_timer);
 #endif
 
-  if (egistec->input_dev != NULL)
-    input_free_device(egistec->input_dev);
-  if (nav_kthread)
-    kthread_stop(nav_kthread);
-
-  nav_kthread = NULL;
+    if (egistec->input_dev != NULL) {
+        input_free_device(egistec->input_dev);
+    }
+    if (nav_kthread) {
+        kthread_stop(nav_kthread);
+    }
+    nav_kthread = NULL;
 }
-
 
 void sysfs_egis_init(struct egistec_data *egistec)
 {
-  int status;
+    int status;
 
-  DEBUG_PRINT("Egis navigation driver, egis_input device init\n");
-  egistec->spi = platform_device_alloc("egis_input", -1);
-  if (!egistec->spi) {
-    pr_err("Egis navigation driver, platform_device_alloc fail\n");
-    return;
-  }
+    DEBUG_PRINT("Egis navigation driver, egis_input device init\n");
+    egistec->spi = platform_device_alloc("egis_input", -1);
+    if (!egistec->spi) {
+        pr_err("Egis navigation driver, platform_device_alloc fail\n");
+        return;
+    }
 
-  status = platform_device_add(egistec->spi);
-  if (status != 0) {
-    pr_err("Egis navigation driver, platform_device_add fail\n");
-    platform_device_put(egistec->spi);
-    return;
-  }
+    status = platform_device_add(egistec->spi);
+    if (status != 0) {
+        pr_err("Egis navigation driver, platform_device_add fail\n");
+        platform_device_put(egistec->spi);
+        return;
+    }
 
-  dev_set_drvdata(&egistec->spi->dev, egistec);
-  status = sysfs_create_group(&egistec->spi->dev.kobj, &attribute_group);
-  if (status) {
-    pr_err("Egis navigation driver, could not create sysfs\n");
-    platform_device_del(egistec->spi);
-    platform_device_put(egistec->spi);
-    return;
-  }
+    dev_set_drvdata(&egistec->spi->dev, egistec);
+    status = sysfs_create_group(&egistec->spi->dev.kobj, &attribute_group);
+    if (status) {
+        pr_err("Egis navigation driver, could not create sysfs\n");
+        platform_device_del(egistec->spi);
+        platform_device_put(egistec->spi);
+        return;
+    }
 }
 
 void sysfs_egis_destroy(struct egistec_data *egistec)
 {
-  DEBUG_PRINT("Egis navigation driver, %s\n", __func__);
+    DEBUG_PRINT("Egis navigation driver, %s\n", __func__);
 
-  if (egistec->spi) {
-    platform_device_del(egistec->spi);
-    platform_device_put(egistec->spi);
-  }
+    if (egistec->spi) {
+        platform_device_del(egistec->spi);
+        platform_device_put(egistec->spi);
+    }
 }

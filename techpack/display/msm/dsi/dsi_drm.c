@@ -689,6 +689,15 @@ int dsi_conn_set_info_blob(struct drm_connector *connector,
 
 	sde_kms_info_add_keyint(info, "bit_depth", bpp);
 
+#ifdef OPLUS_BUG_STABILITY
+	if (panel) {
+		sde_kms_info_add_keystr(info, "aod_ramless",
+			panel->oplus_priv.is_aod_ramless ? "true" : "false");
+	} else {
+		pr_err("%s dsi_panel is null pointer skip aod_ramless!", __func__);
+	}
+#endif
+
 end:
 	return 0;
 }

@@ -2,8 +2,8 @@
 /*
  * Copyright (C) 2018-2020 Oplus. All rights reserved.
  */
-#ifndef OPPO_PROJECT_DATA_OCDT_H
-#define OPPO_PROJECT_DATA_OCDT_H
+#ifndef OPLUS_PROJECT_DATA_OCDT_H
+#define OPLUS_PROJECT_DATA_OCDT_H
 
 #define MAX_OCP	6
 #define MAX_LEN 8
@@ -74,12 +74,11 @@ enum {
     REBOOT_KERNEL       = 0x27,
     REBOOT_MODEM        = 0x28,
     REBOOT_ANDROID      = 0x29,
-//#if defined(PHOENIX_PROJECT) || defined(OPPO_DOCTOR)
-    REBOOT_SBL_DDRTEST  = 0x2B,
+//Modify for PHOENIX_PROJECT and OPPO_DOCTOR use
+    REBOOT_SBL_DDRTEST  = 0x2B,  //Add for agingtest
     REBOOT_SBL_DDR_CUS  = 0x2C,
     REBOOT_AGINGTEST    = 0x2D,
     REBOOT_SBLTEST_FAIL = 0x2E,
-//#endif
     NORMAL_MODE         = 0x3E,
     REBOOT_NORMAL       = 0x3F,
     EMERGENCY_DLOAD     = 0xFF,
@@ -104,7 +103,7 @@ enum PCB_VERSION {
 };
 #endif
 
-enum OPPO_ENG_VERSION {
+enum OPLUS_ENG_VERSION {
     OEM_RELEASE             = 0x00,
     AGING                   = 0x01,
     CTA                     = 0x02,
@@ -118,6 +117,8 @@ enum OPPO_ENG_VERSION {
     ALL_NET_CT_FIELD        = 0x0A,
     HIGH_TEMP_AGING         = 0x0B,
 	FACTORY					= 0x0C,
+	CE                      = 0x0D,
+	PTCRB                   = 0x0E
 };
 
 typedef  struct
@@ -136,7 +137,7 @@ typedef  struct
 
 typedef  struct
 {
-	unsigned int	  OppoBootMode;
+	unsigned int	  OplusBootMode;
 	unsigned int	  RF;
 	unsigned int	  PCB;
 	unsigned char	  PmicOcp[MAX_OCP];

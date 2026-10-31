@@ -75,9 +75,9 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		no-map;
 	};
 
-	ramoops: ramoops@0x0xB7E00000 {
+	ramoops: ramoops@0x0x66800000 {
 		compatible = "ramoops";
-		reg = <0 0xB7E00000 0 0x00400000>;
+		reg = <0 0x66800000 0 0x00400000>;
 		record-size =  <0x40000>; //256x1024
 		console-size = <0x40000>;
 		ftrace-size =  <0x40000>;
@@ -88,7 +88,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 };
 //bengal-qrd.dtsi
 &tlmm {
-	//#ifdef VENDOR_EDIT
+	//#ifdef EDIT
 	adsp_accel_gpio: adsp_accel_gpio {
 		mux {
 			pins = "gpio84";
@@ -123,7 +123,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		};
 	};
 
-	//#ifdef VENDOR_EDIT
+	//#ifdef EDIT
 	//#ifdef FEATURE_OPPO_NV_BACKUP
 	//add for creating a shared memory with uio for nv backup and restore
 	qcom,oembackup_sharedmem@0 {
@@ -135,7 +135,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		qcom,vm-nav-path;
 	};
 	//#endif /* FEATURE_OPPO_NV_BACKUP */
-	//#endif /* VENDOR_EDIT */
+	//#endif /* EDIT */
 
 	devinfo {
 		compatible = "oppo-devinfo";
@@ -154,14 +154,14 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 					1180 1300
 					1301 1599
 					1600 1900>;
-			aboard-patterns = <7 7 5 5 3 3 3 5 5 5 1 5 5 5 5 5>;
+			aboard-patterns = <7 5 5 3 3 3 5 5 5 1 5 5 5 5 5>;
 			/*main board*/
-			match-projects = <20021 20025 20221 20222 20223 20224 20225 20226 20227 20228 20229 20202 20203 20204 20207 20208>;
+			match-projects = <20021 20221 20222 20223 20224 20225 20226 20227 20228 20229 20202 20203 20204 20207 20208>;
 		};
 	};
 
 	//#ifdef OPLUS_FEATURE_FINGERPRINT
-		fingerprint: egis {
+	fingerprint: egis {
 		status = "okay";
 		compatible = "egistec,et523";
 		interrupt-parent = <&tlmm>;
@@ -176,30 +176,33 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 	oppo_fp_common {
 		compatible = "oplus,fp_common";
 		oppo,fp_gpio = <1199 1200>; /* 1199 is gpio32 value,1200 is gpio33 value */
+		oplus,fp_gpio_num = <2>; /* the gpio number of fingerprint id used */
+		oplus,fp_gpio_0 = <&tlmm 32 0x0>;
+		oplus,fp_gpio_1 = <&tlmm 33 0x0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&gpio_id1_default &gpio_id2_default>;
 
 		egis {
-			oppo,fp-id = <1 0>; /* fp id mapping table */
+			oplus,fp-id = <1 0>; /* fp id mapping table */
 			vendor-chip = <18>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "E_et520";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
 		silead_fp {
-			oppo,fp-id = <0 0>; /* fp id mapping table */
-			vendor-chip = <13>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
+			oplus,fp-id = <0 0>; /* fp id mapping table */
+			vendor-chip = <21>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "S_gsl6150";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
 		cdfinger {
-			oppo,fp-id = <1 1>; /* fp id mapping table */
-			vendor-chip = <19>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
+			oplus,fp-id = <1 1>; /* fp id mapping table */
+			vendor-chip = <30>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "F_fps980s";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
 		goodix {
-			oppo,fp-id = <0 1>; /* fp id mapping table */
-			vendor-chip = <20>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
+			oplus,fp-id = <0 1>; /* fp id mapping table */
+			vendor-chip = <25>; /* please refer to the struct fp_vendor_t in oppo_fp_commmon.n */
 			eng-menu = "-1,-1"; /* represents SNR, inclination test item in engineer menu, and 0/1 means off/on */
 			chip-name = "G_3688";  /* /proc/fp_id, will be displayed in engineer menu  */
 		};
@@ -219,18 +222,19 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		avdd-gpios = <&tlmm 93 0x00>;
 		rst-gpios  = <&tlmm 97 0x00>;
 		irq-gpios  = <&tlmm 34 0x00>;
+		sld,enable-via-gpio;
 	};
 	cdfinger_fingerprint {
-        	compatible = "cdfinger,fingerprint";
+		compatible = "cdfinger,fingerprint";
 		interrupt-parent = <&tlmm>;
 		interrupts = <34 0x0>;
 		cdfinger,reset_gpio = <&tlmm 97 0>;
 		cdfinger,irq_gpio = <&tlmm 34 0>;
-        	cdfinger,pwr_gpio = <&tlmm 93 0>;
+		cdfinger,pwr_gpio = <&tlmm 93 0>;
 		//vdd-supply = <&pm8937_l6>;
 	};
 	goodix_fp {
-		compatible = "goodix,goodix_fp_gf3626";
+		compatible = "goodix,goodix_fp";
 		interrupt-parent = <&tlmm>;
 		interrupts = <34 0>;
 		goodix,gpio_irq = <&tlmm 34 0x0>;
@@ -238,6 +242,13 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		goodix,gpio_pwr = <&tlmm 93 0x0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&gpio_goodix_irq_default>;
+		power-num = <1> ;
+		power_source_1 {
+			power-mode = <2>;
+			power-name = "goodix,gpio_pwr";
+			poweron-level = <1>;
+			delay-time = <0>;
+		};
 	};
         //#endif /*OPLUS_FEATURE_FINGERPRINT*/
 	/* ZhaoGen, 2020/01/13, Add for TP Bringup*/
@@ -322,7 +333,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 	};
 	//#endif /* OPLUS_ARCH_EXTENDS */
 
-	//#ifdef VENDOR_EDIT
+	//#ifdef EDIT
 	oplus_rf_cable {
 		compatible = "oplus,rf_cable";
 		interrupt-parent = <&tlmm>;
@@ -332,7 +343,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		pinctrl-names = "rf_cable_active";
 		pinctrl-0 = <&rf_cable0_active>;
 	};
-	//#endif /* VENDOR_EDIT */
+	//#endif /* EDIT */
 
 	//#ifdef OPLUS_FEATURE_THERMAL_HORAE
 	shell_front {
@@ -349,13 +360,13 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 	//#endif /* OPLUS_FEATURE_THERMAL_HORAE */
 };
 &adsp_loader{
-		//#ifdef VENDOR_EDIT
+		//#ifdef EDIT
 		adsp-firmware = "adsp2_v1";
 		pinctrl-names = "default";
 		pinctrl-0 = <&adsp_accel_gpio &adsp_prox_gpio>;
 		adsp-accel-gpio = <&tlmm 84 0>;
 		adsp-prox-gpio = <&tlmm 82 0>;
-		//#endif//VENDOR_EDIT
+		//#endif//EDIT
 	};
 &spmi_bus {
 	qcom,pm6125@0 {
@@ -569,32 +580,16 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 };
 
 /* increase the trigger temp */
-&skin_modem_trip0 {
-    temperature = <80000>;
-};
-
 &skin_gold_trip {
-    temperature = <80000>;
+	temperature = <80000>;
 };
 
 &skin_silver_trip {
-    temperature = <81000>;
-};
-
-&skin_modem_trip1 {
-    temperature = <82000>;
-};
-
-&skin_modem_trip2 {
-    temperature = <83000>;
+	temperature = <81000>;
 };
 
 &skin_gpu_trip {
-    temperature = <83000>;
-};
-
-&skin_modem_trip3 {
-    temperature = <90000>;
+	temperature = <83000>;
 };
 
 &qusb_phy0 {
@@ -839,7 +834,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 	};
 	//#endif /* OPLUS_ARCH_EXTENDS */
 
-	//#ifdef VENDOR_EDIT
+	//#ifdef EDIT
 	rf_cable0_active: rf_cable0_active {
 		mux {
 			pins = "gpio106";
@@ -852,7 +847,7 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 			bias-pull-up;
 		};
 	};
-	//#endif /* VENDOR_EDIT */
+	//#endif /* EDIT */
 	/* ZhaoGen, 2020/01/13, Add for TP Bringup*/
         /delete-node/ qupv3_se2_i2c_pins;
 	qupv3_se2_spi_pins: qupv3_se2_spi_pins {
@@ -1871,9 +1866,9 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		touchpanel,display-coords = <720 1600>;
 		touchpanel,touchmajor-limit = <0 54>;
 
-		platform_support_project = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208 20025>;
-		platform_support_project_dir = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208 20025>;
-		platform_support_project_commandline = "ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h";
+		platform_support_project = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208>;
+		platform_support_project_dir = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208>;
+		platform_support_project_commandline = "ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h","ili9881h";
 		pinctrl-names = "default", "suspend";
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
@@ -1919,9 +1914,9 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		touchpanel,display-coords = <720 1600>;
 		touchpanel,touchmajor-limit = <0 54>;
 
-		platform_support_project = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208 20025>;
-		platform_support_project_dir = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208 20025>;
-		platform_support_project_commandline = "nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525";
+		platform_support_project = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208>;
+		platform_support_project_dir = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208>;
+		platform_support_project_commandline = "nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525","nt36525";
 		pinctrl-names = "default", "suspend";
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
@@ -1967,9 +1962,9 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 		touchpanel,display-coords = <720 1600>;
 		touchpanel,touchmajor-limit = <0 54>;
 
-		platform_support_project = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208 20025>;
-		platform_support_project_dir = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208 20025>;
-		platform_support_project_commandline = "ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n";
+		platform_support_project = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208>;
+		platform_support_project_dir = <20221 20222 20223 20224 20225 20226 20227 20228 20229 20021 20202 20203 20204 20207 20208>;
+		platform_support_project_commandline = "ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n","ili9882n";
 		pinctrl-names = "default", "suspend";
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;

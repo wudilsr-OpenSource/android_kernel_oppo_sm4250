@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2020 Oplus. All rights reserved.
+ */
+/* stat cpu usage on each tick */
 #include <linux/kernel_stat.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
@@ -85,32 +90,12 @@ static void *task_cpustats_next(struct seq_file *m, void *v, loff_t *ppos)
 
 static void *task_cpustats_start(struct seq_file *m, loff_t *ppos)
 {
-	int i, j;
-	unsigned long begin = jiffies - CTP_WINDOW_SZ * HZ, end = jiffies;
 	int *idx = m->private;
 	if (!sysctl_task_cpustats_enable)
 		return NULL;
 	*idx = *ppos;
 	if (*idx >= MAX_PID)
 		goto start_error;
-	memset(cpustats, 0, sizeof(cpustats));
-	for_each_possible_cpu(i) {
-		struct kernel_task_cpustat* kstat = &per_cpu(ktask_cpustat, i);
-		for (j = 0; j < MAX_CTP_WINDOW; j++) {
-			struct task_cpustat *ts = kstat->cpustat + j;
-			unsigned long r_time = ts->end - ts->begin;
-			if (ts->pid >= MAX_PID)
-				continue;
-			if (ts->begin >= begin && ts->end <= end) {
-				struct acct_cpustat *as = cpustats + ts->pid;
-				if (as->pwr == 0)
-					memcpy(as->comm, ts->comm, TASK_COMM_LEN);
-				/* 4 ms each tick */
-				as->pwr += get_power(i, ts->freq) * jiffies_to_msecs(r_time);
-				as->tgid = ts->tgid;
-			}
-		}
-	}
 	for (; *idx < MAX_PID; (*idx)++, (*ppos)++) {
 		struct acct_cpustat *as = cpustats + *idx;
 		if (as->pwr)
@@ -158,9 +143,63 @@ static int sge_proc_open(struct inode *inode, struct file *file)
 	return single_open(file, sge_show, NULL);
 }
 
+static int sgefreq_show(struct seq_file *m, void *v)
+{
+	int cpu;
+	bool show_boost = false;
+	for_each_possible_cpu(cpu) {
+		struct cpufreq_policy *p = cpufreq_cpu_get_raw(cpu);
+		struct cpufreq_frequency_table *pos, *pt;
+
+		if (!p)
+			continue;
+
+		pt = p->freq_table;
+		if (!pt)
+			continue;
+
+		seq_printf(m, "cpu %d\n", cpu);
+
+		cpufreq_for_each_valid_entry(pos, pt) {
+			if (show_boost ^ (pos->flags & CPUFREQ_BOOST_FREQ))
+				continue;
+			seq_printf(m, "%d\n", pos->frequency);
+		}
+	}
+	return 0;
+}
+
+static int sgefreq_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, sgefreq_show, NULL);
+}
+
 static int task_cpustats_open(struct inode *inode, struct file *file)
 {
-	int *offs = __seq_open_private(file, &seq_ops, sizeof(int));
+	int i, j;
+	int *offs;
+	unsigned long begin = jiffies - CTP_WINDOW_SZ * HZ, end = jiffies;
+	if (!sysctl_task_cpustats_enable)
+		return -ENOMEM;
+	memset(cpustats, 0, MAX_PID * sizeof(struct acct_cpustat));
+	for_each_possible_cpu(i) {
+		struct kernel_task_cpustat* kstat = &per_cpu(ktask_cpustat, i);
+		for (j = 0; j < MAX_CTP_WINDOW; j++) {
+			struct task_cpustat *ts = kstat->cpustat + j;
+			unsigned long r_time = ts->end - ts->begin;
+			if (ts->pid >= MAX_PID)
+				continue;
+			if (ts->begin >= begin && ts->end <= end) {
+				struct acct_cpustat *as = cpustats + ts->pid;
+				if (as->pwr == 0)
+					memcpy(as->comm, ts->comm, TASK_COMM_LEN);
+				as->pwr += get_power(i, ts->freq) * jiffies_to_msecs(r_time);
+				as->tgid = ts->tgid;
+			}
+		}
+	}
+
+	offs = __seq_open_private(file, &seq_ops, sizeof(int));
 
 	if (!offs)
 		return -ENOMEM;
@@ -179,6 +218,13 @@ static const struct file_operations sge_proc_fops = {
 	.release	= single_release,
 };
 
+static const struct file_operations sgefreq_proc_fops = {
+	.open		= sgefreq_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static const struct file_operations task_cpustats_proc_fops = {
 	.open		= task_cpustats_open,
 	.read		= seq_read,
@@ -189,6 +235,7 @@ static const struct file_operations task_cpustats_proc_fops = {
 static int __init proc_task_cpustat_init(void)
 {
 	proc_create("sgeinfo", 0, NULL, &sge_proc_fops);
+	proc_create("sgefreqinfo", 0, NULL, &sgefreq_proc_fops);
 	proc_create("task_cpustats", 0, NULL, &task_cpustats_proc_fops);
 	return 0;
 }

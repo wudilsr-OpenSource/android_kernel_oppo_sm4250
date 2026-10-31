@@ -27,7 +27,7 @@
 #include <linux/version.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
-#include "../include/oppo_fp_common.h"
+#include "../include/oplus_fp_common.h"
 #include <net/sock.h>
 #include <linux/uaccess.h>
 
@@ -113,10 +113,9 @@ struct silfp_data {
     struct regulator *avdd_ldo;
     struct regulator *vddio_ldo;
 #endif /* BSP_SIL_POWER_SUPPLY_REGULATOR */
-#ifdef BSP_SIL_POWER_SUPPLY_GPIO
     int avdd_port;
     int vddio_port;
-#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+    int sld_gpio_pwr_flag;
 #ifdef PROC_NODE
     struct proc_dir_entry *proc_root;
     struct proc_dir_entry *proc_entry;
@@ -527,6 +526,12 @@ static void silfp_irq_enable(struct silfp_data *fp_dev)
         LOG_MSG_DEBUG(INFO_LOG, "[%s] irq enabled\n", __func__);
     }
     spin_unlock_irqrestore(&fp_dev->irq_lock, irqflags);
+    if (gpio_get_value(fp_dev->int_port)) {
+        LOG_MSG_DEBUG(INFO_LOG, "[%s] occer, do work queue.\n", __func__);
+        wake_lock_timeout(&fp_dev->wakelock, 10*HZ); /* set a little long for a poor MCU */
+        queue_work(silfp_wq, &fp_dev->work);
+        complete(&fp_dev->done);
+    }
 }
 
 static int silfp_wait_irq(struct silfp_data *fp_dev)
@@ -1248,13 +1253,14 @@ static int silfp_probe(struct platform_device *spi)
 {
     struct silfp_data	*fp_dev;
     int			status = 0;
+    //unsigned long		minor;
 
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
 
-	if(FP_SILEAD_OPTICAL_70 != get_fpsensor_type()){
+    if (FP_SILEAD_6150 != get_fpsensor_type()
+        && FP_SILEAD_6159 != get_fpsensor_type()) {
         pr_err("%s, found not silead sensor\n", __func__);
-
-	status = -EINVAL;
+        status = -EINVAL;
         return status;
     }
 

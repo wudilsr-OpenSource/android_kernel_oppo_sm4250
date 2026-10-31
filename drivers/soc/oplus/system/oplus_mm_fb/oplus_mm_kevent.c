@@ -18,11 +18,15 @@
 #include <linux/vmalloc.h>
 #include <linux/version.h>
 #include <linux/uaccess.h>
+#include <linux/spinlock.h>
 #include "oplus_mm_kevent.h"
 
-static struct sock *mm_netlink_fd = NULL;
+#include <net/genetlink.h>
+#include "oplus_mm_fb_netlink.h"
+
 static struct mm_kevent_module mm_modules[MM_KEVENT_MODULE_SIZE_MAX];
-static u32 mm_kevent_pid;
+static volatile bool mm_kevent_init_flag = false;
+static spinlock_t mm_slock;
 static mm_kevent_recv_user_func mm_fb_kevent_recv_fb = NULL;
 
 /* record connect pid and modules*/
@@ -36,14 +40,17 @@ void mm_fb_kevent_add_module(u32 pid, char* module) {
 
 	len = strlen(module);
 	if (len > (MM_KEVENT_MODULE_LEN_MAX - 1)) {
+		pr_err("mm_kevent: module len is larger than %d error\n", MM_KEVENT_MODULE_LEN_MAX);
 		return;
 	}
 
 	for (i = 0; i < MM_KEVENT_MODULE_SIZE_MAX; i++) {
 		if ((!mm_modules[i].pid) || (!strcmp(mm_modules[i].modl, module))) {
+			spin_lock(&mm_slock);
 			mm_modules[i].pid = pid;
 			memcpy(mm_modules[i].modl, module, len);
 			mm_modules[i].modl[len] = 0x0;
+			spin_unlock(&mm_slock);
 			return;
 		}
 	}
@@ -68,126 +75,37 @@ int mm_fb_kevent_get_pid(char* module) {
 	return MM_KEVENT_BAD_VALUE;
 }
 
-/* send to user space */
-int mm_fb_kevent_send_to_user(struct mm_kevent_packet *userinfo) {
-	int ret, size, size_use;
-	unsigned int o_tail;
-	struct sk_buff *skbuff;
-	struct nlmsghdr *nlh;
-	struct mm_kevent_packet *packet;
-	int pid;
-
-	if (!mm_netlink_fd) {
-		printk(KERN_ERR "mm_netlink_fd is null, error return\n");
-		return MM_KEVENT_BAD_VALUE;
-	}
-
-	/* protect payload too long problem*/
-	if (userinfo->len >= MAX_PAYLOAD_DATASIZE) {
-		printk(KERN_ERR "mm_kevent payload_length out of range\n");
-		return MM_KEVENT_BAD_VALUE;
-	}
-
-	size = NLMSG_SPACE(sizeof(struct mm_kevent_packet) + userinfo->len);
-
-	/*allocate new buffer cache */
-	skbuff = alloc_skb(size, GFP_ATOMIC);
-	if (skbuff == NULL) {
-		printk(KERN_ERR "mm_kevent skbuff alloc_skb failed\n");
-		return MM_KEVENT_BAD_VALUE;
-	}
-
-	/* fill in the data structure */
-	nlh = nlmsg_put(skbuff, 0, 0, 0, size - sizeof(*nlh), 0);
-	if (nlh == NULL) {
-		printk(KERN_ERR "mm_kevent nlmsg_put failaure\n");
-		nlmsg_free(skbuff);
-		return MM_KEVENT_BAD_VALUE;
-	}
-
-	o_tail = skbuff->tail;
-
-	size_use = sizeof(struct mm_kevent_packet) + userinfo->len;
-
-	/* use struct mm_kernel_packet_info for data of nlmsg */
-	packet = NLMSG_DATA(nlh);
-	memset(packet, 0, size_use);
-
-	/* copy the payload content */
-	memcpy(packet, userinfo, size_use);
-
-	//compute nlmsg length
-	nlh->nlmsg_len = skbuff->tail - o_tail;
-
-	/* set control field,sender's pid */
-	#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
-	NETLINK_CB(skbuff).pid = 0;
-	#else
-	NETLINK_CB(skbuff).portid = 0;
-	#endif
-
-	NETLINK_CB(skbuff).dst_group = 0;
-
-	/* send data */
-	pid = mm_fb_kevent_get_pid(userinfo->tag);
-	if (pid == MM_KEVENT_BAD_VALUE) {
-		printk("mm_kevent chang send pid=%d,%s \n", mm_kevent_pid, userinfo->tag);
-		pid = mm_kevent_pid;
-	}
-	ret = netlink_unicast(mm_netlink_fd, skbuff, pid, MSG_DONTWAIT);
-	if (ret < 0) {
-		printk(KERN_ERR "mm_kevent send fail=%d, pid=%d \n", ret, pid);
-		return MM_KEVENT_BAD_VALUE;
-	}
-
-	return MM_KEVENT_NO_ERROR;
-}
-
-EXPORT_SYMBOL(mm_fb_kevent_send_to_user);
-
-void mm_fb_kevent_set_recv_user(mm_kevent_recv_user_func recv_func) {
-	mm_fb_kevent_recv_fb = recv_func;
-}
-
-EXPORT_SYMBOL(mm_fb_kevent_set_recv_user);
-
-/* kernel receive message from user space */
-void mm_fb_kevent_receive(struct sk_buff *__skbbr) {
+static int mm_fb_kevent_send_module(struct sk_buff *skb,
+	struct genl_info *info)
+{
 	struct sk_buff *skbu = NULL;
 	struct nlmsghdr *nlh;
-	char* pmesg   = NULL;
-	uint32_t size = 0x0;
+	struct nlattr *na = NULL;
+	char *pmesg = NULL;
 
-	skbu = skb_get(__skbbr);
-	if (!skbu) {
-		return;
+	pr_info("mm_kevent: mm_fb_kevent_send_module enter\n");
+
+	if (!mm_kevent_init_flag) {
+		pr_err("%s: mm_kevent: not init error\n", __func__);
+		return -1;
 	}
 
-	if (skbu->len >= sizeof(struct nlmsghdr)) {
-		nlh = (struct nlmsghdr *)skbu->data;
-		if ((nlh->nlmsg_len >= sizeof(struct nlmsghdr))
-			&& (__skbbr->len >= nlh->nlmsg_len)) {
-			u32 mm_kevent_type	= nlh->nlmsg_type;
-			u32 mm_kevent_flags = nlh->nlmsg_flags;
-			mm_kevent_pid	= nlh->nlmsg_pid;
-			size = (nlh->nlmsg_len - NLMSG_LENGTH(0));
-			if (size) {
-				pmesg = (char*)kmalloc(size + 0x10, GFP_KERNEL);
-				if (pmesg) {
-					memcpy(pmesg, NLMSG_DATA(nlh), size);
-					pmesg[size] = 0x0;
-					if (mm_kevent_type == MM_KEVENT_CONNECT) {
-						mm_fb_kevent_add_module(mm_kevent_pid, pmesg);
-					}
-					if (mm_kevent_flags) {
-						printk("mm_kevent recv pid=%d, type=%d, flags=%d, data:%s\n",
-						mm_kevent_pid, mm_kevent_type, mm_kevent_flags, pmesg);
-					}
-				}
-			}
-			if (mm_fb_kevent_recv_fb) {
-				mm_fb_kevent_recv_fb(mm_kevent_type, mm_kevent_flags, pmesg);
-			}
+	skbu = skb_get(skb);
+	if (!skbu) {
+		pr_err("mm_kevent: skb_get result is null error\n");
+		return -1;
+	}
+
+	if (info->attrs[MM_FB_CMD_ATTR_MSG]) {
+		na = info->attrs[MM_FB_CMD_ATTR_MSG];
+		nlh = nlmsg_hdr(skbu);
+		pmesg = (char*)kmalloc(nla_len(na) + 0x10, GFP_KERNEL);
+		if (pmesg) {
+			memcpy(pmesg, nla_data(na), nla_len(na));
+			pmesg[nla_len(na)] = 0x0;
+			pr_info("mm_kevent: nla_len(na) %d, pid %d, module: %s\n",
+					nla_len(na), nlh->nlmsg_pid, pmesg);
+			mm_fb_kevent_add_module(nlh->nlmsg_pid, pmesg);
 		}
 	}
 
@@ -197,37 +115,205 @@ void mm_fb_kevent_receive(struct sk_buff *__skbbr) {
 	if (skbu) {
 		kfree_skb(skbu);
 	}
+
+	return 0;
 }
 
-int __init mm_fb_kevent_module_init(void) {
-	struct netlink_kernel_cfg cfg = {
-		.groups = 0x0,
-		.input	= mm_fb_kevent_receive,
-	};
+void mm_fb_kevent_set_recv_user(mm_kevent_recv_user_func recv_func) {
+	mm_fb_kevent_recv_fb = recv_func;
+}
 
-	mm_netlink_fd = netlink_kernel_create(&init_net, OPLUS_NETLINK_MM_KEVENT, &cfg);
-	if (!mm_netlink_fd) {
-		printk(KERN_ERR "mm_kevent can not create a socket\n");
+EXPORT_SYMBOL(mm_fb_kevent_set_recv_user);
+
+static int mm_fb_kevent_test_upload(struct sk_buff *skb,
+	struct genl_info *info)
+{
+	struct sk_buff *skbu = NULL;
+	struct nlattr *na = NULL;
+	char *pmesg = NULL;
+
+	pr_info("mm_kevent: mm_fb_kevent_test_upload enter\n");
+
+	if (!mm_kevent_init_flag) {
+		pr_err("%s: mm_kevent: not init error\n", __func__);
+		return -1;
+	}
+
+	skbu = skb_get(skb);
+	if (!skbu) {
+		pr_err("mm_kevent: skb_get result is null error\n");
+		return -1;
+	}
+
+	if (info->attrs[MM_FB_CMD_ATTR_MSG]) {
+		na = info->attrs[MM_FB_CMD_ATTR_MSG];
+		pr_info("mm_kevent: nla_len(na) is %d, data= %s\n", nla_len(na), (char *)nla_data(na));
+
+		if (nla_len(na) > OPLUS_MM_MSG_TO_KERNEL_BUF_LEN) {
+			pr_err("mm_kevent: message len %d too long error\n", nla_len(na));
+			return -1;
+		}
+
+		pmesg = (char*)kmalloc(nla_len(na) + 0x10, GFP_KERNEL);
+		if (!pmesg) {
+			pr_err("mm_kevent: kmalloc return null error\n");
+			return -1;
+		}
+		memcpy(pmesg, nla_data(na), nla_len(na));
+		pmesg[nla_len(na)] = 0x0;
+
+		if (mm_fb_kevent_recv_fb) {
+			mm_fb_kevent_recv_fb(0, OPLUS_NETLINK_MM_DBG_LV2, pmesg);
+		}
+
+		if (pmesg) {
+			kfree(pmesg);
+		}
+	}
+
+	if (skbu) {
+		kfree_skb(skbu);
+	}
+
+	return 0;
+}
+
+
+#define MM_FB_FAMILY_VERSION	1
+#define MM_FB_FAMILY "mm_fb"
+#define GENL_ID_GENERATE	0
+
+static const struct genl_ops mm_fb_genl_ops[] = {
+	{
+		.cmd		= MM_FB_CMD_GENL_SEND_MODULE,
+		.doit		= mm_fb_kevent_send_module,
+	},
+	{
+		.cmd		= MM_FB_CMD_GENL_TEST_UPLOAD,
+		.doit		= mm_fb_kevent_test_upload,
+	},
+};
+
+static struct genl_family mm_fb_genl_family __ro_after_init = {
+	.id = GENL_ID_GENERATE,
+	.name = MM_FB_FAMILY,
+	.version = MM_FB_FAMILY_VERSION,
+	.maxattr = MM_FB_CMD_ATTR_MAX,
+	.module		= THIS_MODULE,
+	.ops = mm_fb_genl_ops,
+	.n_ops = ARRAY_SIZE(mm_fb_genl_ops),
+};
+
+static inline int genl_msg_prepare_usr_msg(unsigned char cmd, size_t size,
+	pid_t pid, struct sk_buff **skbp)
+{
+	struct sk_buff *skb;
+
+	/* create a new netlink msg */
+	skb = genlmsg_new(size, GFP_KERNEL);
+
+	if (skb == NULL) {
+		pr_err("mm_kevent: genlmsg_new failed\n");
+		return -ENOMEM;
+	}
+
+	/* Add a new netlink message to an skb */
+	genlmsg_put(skb, pid, 0, &mm_fb_genl_family, 0, cmd);
+
+	*skbp = skb;
+	return 0;
+}
+
+static inline int genl_msg_mk_usr_msg(struct sk_buff *skb, int type, void *data,
+	int len)
+{
+	int ret = 0;
+
+	/* add a netlink attribute to a socket buffer */
+	ret = nla_put(skb, type, len, data);
+
+	return ret;
+}
+
+/* send to user space */
+int mm_fb_kevent_send_to_user(struct mm_kevent_packet *userinfo) {
+	int ret;
+	int size_use;
+	struct sk_buff *skbuff;
+	void * head;
+	int pid;
+
+	if (!mm_kevent_init_flag) {
+		pr_err("%s: mm_kevent: not init error\n", __func__);
 		return MM_KEVENT_BAD_VALUE;
 	}
 
-	memset(mm_modules, 0x0, sizeof(mm_modules));
+	/* protect payload too long problem*/
+	if (userinfo->len >= MAX_PAYLOAD_DATASIZE) {
+		pr_err("mm_kevent: payload_length out of range error\n");
+		return MM_KEVENT_BAD_VALUE;
+	}
 
-	printk(KERN_ERR "mm_kevent ok\n");
+	pid = mm_fb_kevent_get_pid(userinfo->tag);
+	if (pid == MM_KEVENT_BAD_VALUE) {
+		pr_err("mm_kevent: tag=%s get pid error\n", userinfo->tag);
+		return MM_KEVENT_BAD_VALUE;
+	}
+
+	size_use = sizeof(struct mm_kevent_packet) + userinfo->len;
+	ret = genl_msg_prepare_usr_msg(MM_FB_CMD_GENL_UPLOAD, size_use, pid, &skbuff);
+	if (ret) {
+		pr_err("mm_kevent: genl_msg_prepare_usr_msg error, ret is %d \n", ret);
+		return ret;
+	}
+
+	ret = genl_msg_mk_usr_msg(skbuff, MM_FB_CMD_ATTR_MSG, userinfo, size_use);
+	if (ret) {
+		pr_err("mm_kevent: genl_msg_mk_usr_msg error, ret is %d \n", ret);
+		kfree_skb(skbuff);
+		return ret;
+	}
+
+	head = genlmsg_data(nlmsg_data(nlmsg_hdr(skbuff)));
+	genlmsg_end(skbuff, head);
+
+	ret = genlmsg_unicast(&init_net, skbuff, pid);
+	if (ret < 0) {
+		pr_err("mm_kevent: genlmsg_unicast fail=%d \n", ret);
+		return MM_KEVENT_BAD_VALUE;
+	}
+
+	return MM_KEVENT_NO_ERROR;
+}
+EXPORT_SYMBOL(mm_fb_kevent_send_to_user);
+
+int __init mm_fb_kevent_module_init(void) {
+	int ret;
+	ret = genl_register_family(&mm_fb_genl_family);
+	if (ret) {
+		pr_err("mm_kevent: genl_register_family:%s error,ret = %d\n", MM_FB_FAMILY, ret);
+		return ret;
+	} else {
+		pr_info("mm_kevent: genl_register_family complete, id = %d!\n", mm_fb_genl_family.id);
+	}
+
+	spin_lock_init(&mm_slock);
+	memset(mm_modules, 0x0, sizeof(mm_modules));
+	mm_kevent_init_flag = true;
+
+	pr_info("mm_kevent: init ok\n");
 	return MM_KEVENT_NO_ERROR;
 }
 
 void __exit mm_fb_kevent_module_exit(void) {
-	if (mm_netlink_fd) {
-		sock_release(mm_netlink_fd->sk_socket);
-	}
-	printk("mm_kevent exit\n");
+	genl_unregister_family(&mm_fb_genl_family);
+	mm_kevent_init_flag = false;
+	pr_info("mm_kevent: exit\n");
 }
 
 module_init(mm_fb_kevent_module_init);
 module_exit(mm_fb_kevent_module_exit);
 
-MODULE_AUTHOR("deliang.peng");
 MODULE_DESCRIPTION("mm_kevent@1.0");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL");

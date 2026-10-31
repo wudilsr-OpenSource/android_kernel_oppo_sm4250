@@ -17,8 +17,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pinctrl/consumer.h>
 #include "../include/wakelock.h"
-//#include <net/scm.h>
-#include "../include/oppo_fp_common.h"
+#include <soc/qcom/scm.h>
+#include "../include/oplus_fp_common.h"
 
 #undef dev_info
 #define dev_info dev_err
@@ -45,7 +45,7 @@ struct vreg_config {
         int ua_load;
 };
 
-static const struct vreg_config vreg_conf[] = {
+static const struct vreg_config const vreg_conf[] = {
         { "vdd_io", 1800000UL, 1800000UL, 10000, },
         { "vmch", 2960000UL, 2960000UL, 10000, },
         { "avdd_io", 3300000UL, 3300000UL, 10000, },

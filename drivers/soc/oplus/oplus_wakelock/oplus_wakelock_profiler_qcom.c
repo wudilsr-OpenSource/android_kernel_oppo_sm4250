@@ -259,18 +259,17 @@ void wakeup_get_end_hold_time(void)
 
 static void kernel_time_reset(void)
 {
-	unsigned long flags = 0;
 	if (!ws_all_release()) {
 		ktime_t offset_hold_time;
 		ktime_t now = ktime_get();
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		offset_hold_time = ktime_sub(now, wsts.start);
 		wsts.reset = ktime_add(wsts.hold, offset_hold_time);
-		 spin_unlock_irqrestore(&ws_lock, flags);
+		spin_unlock_bh(&ws_lock);
 	} else {
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		wsts.reset = wsts.hold;
-		spin_unlock_irqrestore(&ws_lock, flags);
+		spin_unlock_bh(&ws_lock);
 	}
 }
 
@@ -293,20 +292,19 @@ static ssize_t kernel_time_show(struct kobject *kobj,
 {
 	int buf_offset = 0;
 	ktime_t newest_hold_time;
-	unsigned long flags = 0;
 
 	if(!ws_all_release()) {
 		ktime_t offset_hold_time;
 		ktime_t now = ktime_get();
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		offset_hold_time = ktime_sub(now, wsts.start);
 		newest_hold_time = ktime_add(wsts.hold, offset_hold_time);
 	} else {
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		newest_hold_time = wsts.hold;
 	}
 	newest_hold_time = ktime_sub(newest_hold_time, wsts.reset);
-	spin_unlock_irqrestore(&ws_lock, flags);
+	spin_unlock_bh(&ws_lock);
 	buf_offset += sprintf(buf + buf_offset, "%lld\n", ktime_to_ms(newest_hold_time));
 
 	return buf_offset;

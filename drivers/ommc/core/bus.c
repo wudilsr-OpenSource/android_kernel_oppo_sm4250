@@ -28,10 +28,6 @@
 #include "sdio_cis.h"
 #include "bus.h"
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-#include "../host/sdInfo/sdinfo.h"
-#endif
-
 #define to_mmc_driver(d)	container_of(d, struct mmc_driver, drv)
 
 static ssize_t type_show(struct device *dev,
@@ -312,9 +308,6 @@ struct mmc_card *mmc_alloc_card(struct mmc_host *host, struct device_type *type)
 	return card;
 }
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-extern void set_sdinfo(struct mmc_card *card);
-#endif
 /*
  * Register a new MMC card with the driver model.
  */
@@ -394,13 +387,6 @@ int mmc_add_card(struct mmc_card *card)
 		return ret;
 
 	mmc_card_set_present(card);
-
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-	if (card->type == MMC_TYPE_SD) {
-		reset_sdinfo();
-		set_sdinfo(card);
-	}
-#endif
 
 	return 0;
 }

@@ -185,6 +185,7 @@ static RADIX_TREE(ns_tree, GFP_ATOMIC);
 static DEFINE_SPINLOCK(ns_tree_lock);
 static struct ns_stat_info nsi;
 static struct proc_dir_entry *ns_proc_root = NULL;
+static struct proc_dir_entry *ns_proc_root_vnd = NULL;
 
 struct task_struct *nswapoutd = NULL;
 struct task_struct *nswapdropd = NULL;
@@ -718,6 +719,19 @@ cont:
 		if (isolate_lru_page(page))
 			continue;
 
+		/*
+		 * MADV_FREE clears pte dirty bit and then marks the page
+		 * lazyfree (clear SwapBacked). Inbetween if this lazyfreed page
+		 * is touched by user then it becomes dirty.  PPR in
+		 * shrink_page_list in try_to_unmap finds the page dirty, marks
+		 * it back as PageSwapBacked and skips reclaim. This can cause
+		 * isolated count mismatch.
+		 */
+		if (PageAnon(page) && !PageSwapBacked(page)) {
+			putback_lru_page(page);
+			continue;
+		}
+
 		list_add(&page->lru, &page_list);
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
 		inc_node_page_state(page, NR_ISOLATED_ANON +
@@ -947,7 +961,21 @@ static int drop_swapcache_pte(pmd_t *pmd, unsigned long start,
 		if (isolate_lru_page(page))
 			continue;
 
+		/*
+		 * MADV_FREE clears pte dirty bit and then marks the page
+		 * lazyfree (clear SwapBacked). Inbetween if this lazyfreed page
+		 * is touched by user then it becomes dirty.  PPR in
+		 * shrink_page_list in try_to_unmap finds the page dirty, marks
+		 * it back as PageSwapBacked and skips reclaim. This can cause
+		 * isolated count mismatch.
+		 */
+		if (PageAnon(page) && !PageSwapBacked(page)) {
+			putback_lru_page(page);
+			continue;
+		}
+
 		list_add(&page->lru, &page_list);
+
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
 		inc_node_page_state(page, NR_ISOLATED_ANON +
 				page_is_file_cache(page));
@@ -1481,39 +1509,51 @@ static struct file_operations stat_info_fops = {
 	.release = single_release,
 };
 
-static inline void ns_create_proc(void)
-{
-	ns_proc_root = proc_mkdir("nandswap", NULL);
-	if (ns_proc_root) {
-		proc_create("swap_ctl", S_IRUGO | S_IWUGO, ns_proc_root,
+static inline void ns_create_proc(struct proc_dir_entry *parent) {
+	if (parent) {
+		proc_create("swap_ctl", S_IRUGO | S_IWUGO, parent,
 				&swap_ctl_fops);
-		proc_create("fn_enable", S_IRUGO | S_IWUGO, ns_proc_root,
+		proc_create("fn_enable", S_IRUGO | S_IWUGO, parent,
 				&fn_enable_fops);
-		proc_create("swap_limit", S_IWUGO, ns_proc_root,
+		proc_create("swap_limit", S_IWUGO, parent,
 				&swap_limit_fops);
-		proc_create("dev_life", S_IWUGO, ns_proc_root,
+		proc_create("dev_life", S_IWUGO, parent,
 				&dev_life_fops);
-		proc_create("life_protect", S_IRUGO, ns_proc_root,
+		proc_create("life_protect", S_IRUGO, parent,
 				&life_protect_fops);
-		proc_create("stat_info", S_IRUGO, ns_proc_root,
+		proc_create("stat_info", S_IRUGO, parent,
 				&stat_info_fops);
 	}
-	return;
 }
 
-static inline void ns_remove_proc(void)
+static inline void ns_create_proc_dir(void)
 {
-	if (ns_proc_root) {
-		remove_proc_entry("stat_info", ns_proc_root);
-		remove_proc_entry("life_protect", ns_proc_root);
-		remove_proc_entry("dev_life", ns_proc_root);
-		remove_proc_entry("swap_limit", ns_proc_root);
-		remove_proc_entry("fn_enable", ns_proc_root);
-		remove_proc_entry("swap_ctl", ns_proc_root);
-		remove_proc_entry("nandswap", NULL);
-		ns_proc_root = NULL;
+	ns_proc_root = proc_mkdir("nandswap", NULL);
+	ns_create_proc(ns_proc_root);
+	ns_proc_root_vnd = proc_mkdir("nandswap_vnd", NULL);
+	ns_create_proc(ns_proc_root_vnd);
+}
+
+static inline void ns_remove_proc(struct proc_dir_entry *parent) {
+	if (parent) {
+		remove_proc_entry("stat_info", parent);
+		remove_proc_entry("life_protect", parent);
+		remove_proc_entry("dev_life", parent);
+		remove_proc_entry("swap_limit", parent);
+		remove_proc_entry("fn_enable", parent);
+		remove_proc_entry("swap_ctl", parent);
+		if (parent == ns_proc_root)
+			remove_proc_entry("nandswap", NULL);
+		else
+			remove_proc_entry("nandswap_vnd", NULL);
+		parent = NULL;
 	}
-	return;
+}
+
+static inline void ns_remove_proc_dir(void)
+{
+	ns_remove_proc(ns_proc_root);
+	ns_remove_proc(ns_proc_root_vnd);
 }
 
 static void nandswap_stop(void)
@@ -1563,14 +1603,14 @@ static int __init nandswap_init(void)
 
 	profile_event_register(PROFILE_TASK_EXIT, &process_notifier_block);
 	ns_life_ctrl_init();
-	ns_create_proc();
+	ns_create_proc_dir();
 
 	return 0;
 }
 
 static void __exit nandswap_exit(void)
 {
-	ns_remove_proc();
+	ns_remove_proc_dir();
 	profile_event_unregister(PROFILE_TASK_EXIT, &process_notifier_block);
 	nandswap_stop();
 }

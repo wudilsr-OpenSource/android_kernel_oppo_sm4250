@@ -102,6 +102,13 @@ msm_drm-$(CONFIG_DRM_MSM_DSI) += dsi/dsi_phy.o \
 	dsi/dsi_display_test.o \
 	dsi/dsi_oplus_support.o \
 	dsi/oplus_display_private_api.o\
+	dsi/oplus_display_panel.o\
+	dsi/oplus_aod.o\
+	dsi/oplus_display_panel_common.o\
+	dsi/oplus_dc_diming.o\
+	dsi/oplus_display_panel_cabc.o\
+	dsi/oplus_onscreenfingerprint.o\
+	dsi/oplus_display_panel_seed.o\
 
 msm_drm-$(CONFIG_DSI_PARSER) += dsi/dsi_parser.o \
 

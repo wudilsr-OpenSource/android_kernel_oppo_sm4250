@@ -13,8 +13,10 @@ endif
 CONFIG_KERVER_VERSION := $(VERSION).$(PATCHLEVEL)
 
 ifeq ($(CONFIG_KERVER_VERSION),5.4)
+$(info lowmem_dbg mtk_ion use kernel $(CONFIG_KERVER_VERSION))
 obj-$(CONFIG_OPLUS_FEATURE_LOWMEM_DBG)   += lowmem_dbg_5.4.o
 else
+$(info lowmem_dbg mtk_ion use kernel $(CONFIG_KERVER_VERSION))
 obj-$(CONFIG_OPLUS_FEATURE_LOWMEM_DBG)   += lowmem_dbg.o
 endif
 

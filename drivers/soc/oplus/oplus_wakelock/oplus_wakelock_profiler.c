@@ -10,9 +10,9 @@
 #include "qcom_platform_lito.h"
 #include "qcom_platform_lahaina.h"
 #include "qcom_platform_trinket.h"
-#include "qcom_platform_holi.h"
 #include "qcom_platform_bengal.h"
 #include "qcom_platform_lagoon.h"
+#include "qcom_platform_blair.h"
 
 static int platform_id;
 static struct wakeup_count_desc_t **comm_all_modules;
@@ -54,6 +54,11 @@ static int get_platform(void)
 		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_lagoon;
 		modem_report_exchange = modem_report_exchange_lagoon;
 		pr_info("platform is %s\n", PLATFORM_LAGOON);
+	} else if (strstr(comp_str, PLATFORM_BLAIR)) {
+		platform_id = BLAIR;
+		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_blair;
+		modem_report_exchange = modem_report_exchange_blair;
+		pr_info("platform is %s\n", PLATFORM_BLAIR);
 	} else if (strstr(comp_str, PLATFORM_TRINKET)) {
 		platform_id = TRINKET;
 		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_trinket;
@@ -64,16 +69,11 @@ static int get_platform(void)
 		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_bengal;
 		modem_report_exchange = modem_report_exchange_bengal;
 		pr_info("platform is %s\n", PLATFORM_BENGAL);
-	} else if (strstr(comp_str, PLATFORM_LAHAINA)) {
+	} else if (strstr(comp_str, PLATFORM_LAHAINA) || strstr(comp_str, PLATFORM_YUPIK)) {
 		platform_id = LAHAINA;
 		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_lahaina;
 		modem_report_exchange = modem_report_exchange_lahaina;
 		pr_info("platform is %s\n", PLATFORM_LAHAINA);
-	} else if (strstr(comp_str, PLATFORM_HOLI)) {
-		platform_id = HOLI;
-		comm_all_modules = (struct wakeup_count_desc_t **)all_modules_holi;
-		modem_report_exchange = modem_report_exchange_holi;
-		pr_info("platform is %s\n", PLATFORM_HOLI);
 	} else {
 		platform_id = 0;
 		comm_all_modules = NULL;
@@ -259,7 +259,7 @@ static ssize_t wakeup_stastisc_reset_store (
 	const char *pstring = "reset";
 
 	if (!platform_id) {
-		return count;
+		return 0;
 	}
 
 	if(!(count == strlen(pstring) || (count == strlen(pstring) + 1 && buf[count-1] == '\n'))) {
@@ -329,6 +329,8 @@ static ssize_t modem_resume_reason_stastics_show(
 			}
 		}
 
+                pr_info("ipa_count %d, qmi_count %d, other_count %d, module_all_count %d, wakeup Top name is %s.\n",
+                                        ipa_count, qmi_count, other_count, desc->module_all_count, desc->ws_desc[index].name);
 		/* Just return the maximum modem wakeup count and modem total wakeup count. */
 		if (other_count > ipa_count && other_count > qmi_count) {
 			report_name = desc->ws_desc[index].name;
@@ -392,18 +394,17 @@ void wakeup_get_end_hold_time(void)
 
 static void kernel_time_reset(void)
 {
-	unsigned long flags = 0;
 	if (!ws_all_release()) {
 		ktime_t offset_hold_time;
 		ktime_t now = ktime_get();
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		offset_hold_time = ktime_sub(now, wsts.start);
 		wsts.reset = ktime_add(wsts.hold, offset_hold_time);
-		spin_unlock_irqrestore(&ws_lock, flags);
+		spin_unlock_bh(&ws_lock);
 	} else {
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		wsts.reset = wsts.hold;
-		spin_unlock_irqrestore(&ws_lock, flags);
+		spin_unlock_bh(&ws_lock);
 	}
 }
 
@@ -426,20 +427,19 @@ static ssize_t kernel_time_show(struct kobject *kobj,
 {
 	int buf_offset = 0;
 	ktime_t newest_hold_time;
-	unsigned long flags = 0;
 
 	if(!ws_all_release()) {
 		ktime_t offset_hold_time;
 		ktime_t now = ktime_get();
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		offset_hold_time = ktime_sub(now, wsts.start);
 		newest_hold_time = ktime_add(wsts.hold, offset_hold_time);
 	} else {
-		spin_lock_irqsave(&ws_lock, flags);
+		spin_lock_bh(&ws_lock);
 		newest_hold_time = wsts.hold;
 	}
 	newest_hold_time = ktime_sub(newest_hold_time, wsts.reset);
-	spin_unlock_irqrestore(&ws_lock, flags);
+	spin_unlock_bh(&ws_lock);
 	buf_offset += sprintf(buf + buf_offset, "%lld\n", ktime_to_ms(newest_hold_time));
 
 	return buf_offset;

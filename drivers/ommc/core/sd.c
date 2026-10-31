@@ -29,11 +29,6 @@
 #include "mmc_ops.h"
 #include "sd.h"
 #include "sd_ops.h"
-
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-#include "../host/sdInfo/sdinfo.h"
-#endif
-
 #ifdef OPLUS_FEATURE_EMMC_SDCARD_OPTIMIZE
 struct menfinfo {
 	unsigned int manfid;
@@ -1430,10 +1425,6 @@ static int _mmc_sd_resume(struct mmc_host *host)
 out:
 	mmc_log_string(host, "Exit err: %d\n", err);
 	mmc_release_host(host);
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-	if (err)
-		sdinfo.runtime_resume_error_count += 1;
-#endif
 	return err;
 }
 

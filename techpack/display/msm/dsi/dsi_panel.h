@@ -195,7 +195,6 @@ struct dsi_panel_oplus_privite {
 	bool dfps_idle_off;
 	bool brightness_alpha_rum;
 	bool bl_interpolate_nosub;
-	bool panel_cabc_soda;
 };
 #endif /* OPLUS_BUG_STABILITY */
 

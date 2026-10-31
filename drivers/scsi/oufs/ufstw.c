@@ -422,7 +422,7 @@ void ufstw_get_dev_info(struct ufsf_feature *ufsf, u8 *desc_buf)
 	else
 		tw_dev_info->tw_ver = LI_EN_16(&desc_buf[DEVICE_DESC_PARAM_TW_VER_3_0]);
 	/*temporary for hynix 2.2 tw function*/
-	if(wspecversion == 0x220 && ((w_manufacturer_id == 0x1AD) || (w_manufacturer_id == 0x12C)))
+	if(wspecversion == 0x220 && w_manufacturer_id == 0x1AD)
 		tw_dev_info->tw_ver = UFSTW_VER_1_1_0;
 
 	if (ufstw_version_mismatched(tw_dev_info)) {

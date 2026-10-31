@@ -40,10 +40,6 @@
 
 #include "sdhci.h"
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-#include "sdInfo/sdinfo.h"
-#endif
-
 #define DRIVER_NAME "sdhci"
 
 #define DBG(f, x...) \
@@ -1945,27 +1941,11 @@ static int sdhci_get_tuning_cmd(struct sdhci_host *host)
 
 static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-	struct sdhci_host *host = mmc_priv(mmc);
+	struct sdhci_host *host;
 	int present;
 	unsigned long flags;
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-	static long count = 0;
-
-	if (( SET_SDCARD_QUICK_RETURN == get_sdcard_remove()) && mmc->card && mmc_card_sd(mmc->card)) {
-		if (mrq && mrq->cmd && ((mrq->cmd->opcode == MMC_READ_SINGLE_BLOCK) || (mrq->cmd->opcode == MMC_READ_MULTIPLE_BLOCK) || (mrq->cmd->opcode == MMC_WRITE_BLOCK) || (mrq->cmd->opcode == MMC_WRITE_MULTIPLE_BLOCK))) {
-			if (count%6 == 0)
-				pr_err("mmc card(sd) error, cmd: %u arg: %u\n", mrq->cmd->opcode, mrq->cmd->arg);
-			count += 1;
-			mrq->cmd->error = (unsigned int)-EIO;
-			if (mrq->data)
-				mrq->data->error = -EIO;
-			host->mrq = NULL;
-			mmc_request_done(host->mmc, mrq);
-			return;
-		}
-	}
-#endif
+	host = mmc_priv(mmc);
 
 	if (sdhci_check_state(host)) {
 		sdhci_dump_state(host);
@@ -3171,9 +3151,6 @@ static void sdhci_timeout_data_timer(struct timer_list *t)
 			host->cmd->error = -ETIMEDOUT;
 			sdhci_finish_mrq(host, host->cmd->mrq);
 		}
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-		sdinfo.data_timeout_count += 1;
-#endif
 	}
 
 	mmiowb();

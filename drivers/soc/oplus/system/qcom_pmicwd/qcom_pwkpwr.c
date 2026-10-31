@@ -10,15 +10,26 @@
 #include <linux/suspend.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
-#include <soc/oplus/system/oplus_project.h>
+#include "soc/oplus/system/oplus_project.h"
+#include <linux/input/qpnp-power-on.h>
 #include <linux/debugfs.h>
+#include <linux/version.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#include <soc/oplus/system/qcom_pmicwd.h>
+#else
 #include <linux/regmap.h>
 #include <linux/input/qpnp-power-on.h>
+#endif
 
 #define QPNP_PON_KPDPWR_S1_TIMER(pon)		((pon)->base + 0x40)
 #define QPNP_PON_KPDPWR_S2_TIMER(pon)		((pon)->base + 0x41)
 #define QPNP_PON_KPDPWR_S2_CNTL(pon)		((pon)->base + 0x42)
 #define QPNP_PON_KPDPWR_S2_CNTL2(pon)		((pon)->base + 0x43)
+
+#define QPNP_PON_RESET_S1_TIMER(pon)		((pon)->base + 0x44)
+#define QPNP_PON_RESET_S2_TIMER(pon)		((pon)->base + 0x45)
+#define QPNP_PON_RESET_S2_CNTL(pon)		    ((pon)->base + 0x46)
+#define QPNP_PON_RESET_S2_CNTL2(pon)		((pon)->base + 0x47)
 
 #define QPNP_PON_S2_CNTL2_EN			BIT(7)
 #define QPNP_PON_S2_CNTL2_DIS			0x0
@@ -46,6 +57,7 @@
  *
 **/
 static bool pwkpwr_enable;
+static bool volup_enable;
 
 static ssize_t kpdpwr_proc_write(struct file *filep, const char __user *ubuf,
 		size_t cnt,loff_t *data)
@@ -118,15 +130,60 @@ static ssize_t kpdpwr_proc_write(struct file *filep, const char __user *ubuf,
 					QPNP_PON_KPDPWR_S2_CNTL(pon), rc);
 		pwkpwr_enable = false;
 	}
+        if (val == 101) {
+		pr_err("QPNP_PON_RESET_S2_CNTL2(pon) addr:%x", QPNP_PON_RESET_S2_CNTL2(pon));
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_RESET_S2_CNTL2(pon),
+				QPNP_PON_S2_CNTL2_EN, QPNP_PON_S2_CNTL2_EN);
+		if (rc)
+			dev_err(pon->dev,
+					"Unable to write to addr=%x, rc(%d)\n",
+					QPNP_PON_RESET_S2_CNTL2(pon), rc);
+
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_RESET_S2_CNTL(pon),
+				QPNP_PON_S2_CNTL_TYPE_MASK, QPNP_PON_S2_CNTL_EN);
+		if (rc)
+			dev_err(pon->dev,
+					"Unable to write to addr=%x, rc(%d)\n",
+					QPNP_PON_RESET_S2_CNTL(pon), rc);
+
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_RESET_S1_TIMER(pon),
+				QPNP_PON_S1_TIMER_MASK, QPNP_PON_KPDPWR_S1_TIMER_TIME);
+		if (rc)
+			dev_err(pon->dev,
+					"Unable to write to addr=%x, rc(%d)\n",
+					QPNP_PON_RESET_S1_TIMER(pon), rc);
+
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_RESET_S2_TIMER(pon),
+				QPNP_PON_S2_TIMER_MASK, QPNP_PON_KPDPWR_S2_TIMER_TIME);
+		if (rc)
+			dev_err(pon->dev,
+					"Unable to write to addr=%x, rc(%d)\n",
+					QPNP_PON_RESET_S2_TIMER(pon), rc);
+		volup_enable = true;
+	}
+        if (val == 100) {
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_RESET_S2_CNTL2(pon),
+				QPNP_PON_S2_CNTL2_EN, QPNP_PON_S2_CNTL2_DIS);
+		if (rc)
+			dev_err(pon->dev,
+					"Unable to write to addr=%x, rc(%d)\n",
+					QPNP_PON_RESET_S2_CNTL2(pon), rc);
+
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_RESET_S2_CNTL(pon),
+				QPNP_PON_S2_CNTL_TYPE_MASK, QPNP_PON_S2_CNTL_DIS);
+		if (rc)
+			dev_err(pon->dev,
+					"Unable to write to addr=%x, rc(%d)\n",
+					QPNP_PON_RESET_S2_CNTL(pon), rc);
+		volup_enable = false;
+	}
 	return cnt;
 }
 
 static int kpdpwr_proc_show(struct seq_file *m, void *v)
 {
-	if (pwkpwr_enable)
-		SEQ_printf(m, "Long pwk dump enable\n");
-	else
-		SEQ_printf(m, "Long pwk dump disable\n");
+	SEQ_printf(m, "%s\n%s\n", pwkpwr_enable ? "Long pwk dump enable\n" : "Long pwk dump disable\n",
+	                       volup_enable ? "Long volup dump enable\n" : "Long volup dump disable\n");
 	return 0;
 }
 

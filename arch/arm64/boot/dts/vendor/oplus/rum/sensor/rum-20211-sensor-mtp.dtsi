@@ -1,6 +1,9 @@
 #include <dt-bindings/clock/qcom,gcc-bengal.h>
 
 &soc {
+    sensor_fb {
+		compatible = "oplus,sensor-feedback";
+	};
 	oplus_sensor {
 			compatible = "oplus,sensor-devinfo";
 			als-row-coe = <110>;

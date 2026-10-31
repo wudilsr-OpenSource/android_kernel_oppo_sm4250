@@ -20,11 +20,12 @@
 #include <soc/oplus/oplus_project.h>
 #include <soc/oplus/device_info.h>
 
-extern int oplus_update_aod_light_mode_unlock(struct dsi_panel *panel);
-extern int oplus_display_update_aod_area_unlock(void);
+#include "oplus_display_private_api.h"
+#include "oplus_aod.h"
+#include "oplus_dc_diming.h"
+
 extern int oplus_set_aod_gamma_data_status(struct dsi_panel *panel);
 extern int oplus_bl_normal_max_level;
-extern int oplus_display_mode;
 int oplus_dfps_idle_off = 0;
 bool oplus_first_vid = false;
 #endif /*OPLUS_BUG_STABILITY*/
@@ -572,7 +573,6 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 }
 //#endif
 #ifdef OPLUS_BUG_STABILITY
-extern int oplus_dc2_alpha;
 int oplus_seed_backlight = 0;
 static struct dsi_panel_cmd_set oplus_priv_seed_cmd_set;
 extern int oplus_dimlayer_bl_alpha_value;
@@ -2099,9 +2099,10 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-failsafe-off-command",
 	"qcom,mdss-dsi-seed-enter-command",
 	"qcom,mdss-dsi-seed-exit-command",
-	"qcom,mdss-dsi-cabc-low-mode-command",
-	"qcom,mdss-dsi-cabc-high-mode-command",
 	"qcom,mdss-dsi-cabc-off-command",
+	"qcom,mdss-dsi-cabc-mode1-command",
+	"qcom,mdss-dsi-cabc-mode2-command",
+	"qcom,mdss-dsi-cabc-mode3-command",
 	"qcom,mdss-dsi-cabc-ui-command",
 	"qcom,mdss-dsi-cabc-still-image-command",
 	"qcom,mdss-dsi-cabc-video-command",
@@ -2160,9 +2161,10 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-failsafe-off-command-state",
 	"qcom,mdss-dsi-seed-enter-command-state",
 	"qcom,mdss-dsi-seed-exit-command-state",
-	"qcom,mdss-dsi-cabc-low-mode-command-state",
-	"qcom,mdss-dsi-cabc-high-mode-command-state",
 	"qcom,mdss-dsi-cabc-off-command-state",
+	"qcom,mdss-dsi-cabc-mode1-command-state",
+	"qcom,mdss-dsi-cabc-mode2-command-state",
+	"qcom,mdss-dsi-cabc-mode3-command-state",
 	"qcom,mdss-dsi-cabc-ui-command-state",
 	"qcom,mdss-dsi-cabc-still-image-command-state",
 	"qcom,mdss-dsi-cabc-video-command-state",
@@ -2646,10 +2648,6 @@ static int dsi_panel_parse_oplus_config(struct dsi_panel *panel)
 	DSI_INFO("oplus,brightness-alpha-rum: %s",
 		panel->oplus_priv.brightness_alpha_rum ? "true" : "false");
 
-	panel->oplus_priv.panel_cabc_soda = utils->read_bool(utils->data,
-		"oplus,panel-cabc-soda");
-	DSI_INFO("oplus,panel-cabc-soda: %s",
-		panel->oplus_priv.panel_cabc_soda ? "true" : "false");
 	return 0;
 }
 
@@ -5008,7 +5006,7 @@ int dsi_panel_mode_switch_to_cmd(struct dsi_panel *panel)
 		       panel->name, rc);
 #ifdef OPLUS_BUG_STABILITY
 	oplus_first_vid = false;
-	oplus_display_update_aod_area_unlock();
+	oplus_ramless_panel_update_aod_area_unlock();
 #endif /*OPLUS_BUG_STABILITY*/
 
 	mutex_unlock(&panel->panel_lock);

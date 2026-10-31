@@ -32,12 +32,12 @@ int soc_aux_init_only_sia81xx(
 	struct platform_device *pdev,
 	struct snd_soc_card *card);
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef CONFIG_SIA_PA_ALGO
 extern void sia81xx_start(void);
 extern void sia81xx_stop(void);
 #endif /*CONFIG_SIA_PA_ALGO*/
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 
 #endif /* _SIA81XX_AUX_DEV_IF_H */
 

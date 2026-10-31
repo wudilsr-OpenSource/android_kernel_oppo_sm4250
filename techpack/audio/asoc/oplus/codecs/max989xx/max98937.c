@@ -101,7 +101,12 @@ int max98927_reg_common_map[][2] = {
 	{MAX98927_Measurement_DSP_Config, 0xF7},
 	{MAX98927_PCM_Tx_Enables_B, 0x00},
 	{MAX98927_PCM_Rx_Enables_B, 0x00},
+	#ifndef OPLUS_ARCH_EXTENDS
+	//Chunyu.xie add for changing 98927's IV order
 	{MAX98927_PCM_Tx_Channel_Sources_B, 0x00},
+	#else/*OPLUS_ARCH_EXTENDS*/
+	{MAX98927_PCM_Tx_Channel_Sources_B, 0x20},
+	#endif/*OPLUS_ARCH_EXTENDS*/
 	{MAX98927_PCM_Tx_HiZ_Control_B, 0xFF},
 	{MAX98927_Measurement_enables, 0x00},
 	{MAX98927_PDM_Rx_Enable,  0x00},

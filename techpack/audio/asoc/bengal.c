@@ -582,7 +582,7 @@ static void *def_rouleur_mbhc_cal(void);
 static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
-	#ifdef OPLUS_ARCH_EXTENDS
+	#ifndef OPLUS_ARCH_EXTENDS
 	.detect_extn_cable = false,
 	#else /* OPLUS_ARCH_EXTENDS */
 	.detect_extn_cable = true,
@@ -2974,8 +2974,18 @@ static int aw87xxx_mode_set_1(struct snd_kcontrol *kcontrol,
 }
 
 #ifdef OPLUS_AUDIO_PA_BOOST_VOLTAGE
-static const char *const ext_top_speaker_voltage_function[] = { "70", "75", "80" };
-static const char *const ext_bottom_speaker_voltage_function[] = { "70", "75", "80" };
+enum {
+	AW87XXX_VOLTAGE_LEVEL_1 = 0,
+	AW87XXX_VOLTAGE_LEVEL_4 = 1,
+	AW87XXX_VOLTAGE_LEVEL_COUNT
+};
+
+const char *const ext_amp_boost_vol_text[] = {"Level_1", "Level_2", "Level_3", "Level_4"};
+
+static const int spk_voltage_value[AW87XXX_VOLTAGE_LEVEL_COUNT] = {
+	70,
+	80
+};
 #endif /* OPLUS_AUDIO_PA_BOOST_VOLTAGE */
 
 static const struct soc_enum msm_snd_enum[] = {
@@ -2983,54 +2993,20 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(mode_function), mode_function),
 
 	#ifdef OPLUS_AUDIO_PA_BOOST_VOLTAGE
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ext_top_speaker_voltage_function),
-				ext_top_speaker_voltage_function),
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ext_bottom_speaker_voltage_function),
-				ext_bottom_speaker_voltage_function),
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(ext_amp_boost_vol_text),
+				ext_amp_boost_vol_text),
 	#endif /* OPLUS_AUDIO_PA_BOOST_VOLTAGE */
 };
 
 
 #ifdef OPLUS_AUDIO_PA_BOOST_VOLTAGE
-#define AW87XXX_RCV_VOLTAGE_DEFAULT (80)
 #define AW87XXX_SPK_VOLTAGE_DEFAULT (80)
-static int aw87xxx_rcv_voltage = 80;
 static int aw87xxx_spk_voltage = 80;
 //extern int (*awinic_set_rcv_voltage_pf) (int val);
 //extern int (*awinic_set_spk_voltage_pf) (int val);
 extern int aw87xxx_set_spk_voltage(int level);
 
-static int ext_top_speaker_voltage_get(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	ucontrol->value.integer.value[0] = aw87xxx_rcv_voltage;
-
-	return 0;
-}
-
-static int ext_top_speaker_voltage_put(struct snd_kcontrol *kcontrol,
-		struct snd_ctl_elem_value *ucontrol)
-{
-	if (ucontrol->value.integer.value[0] == aw87xxx_rcv_voltage){
-		return 1;
-	}
-
-	if (ucontrol->value.integer.value[0] > 0) {
-		aw87xxx_rcv_voltage = ucontrol->value.integer.value[0];
-	} else {
-		aw87xxx_rcv_voltage = AW87XXX_RCV_VOLTAGE_DEFAULT;
-	}
-
-	/*
-	if(awinic_set_rcv_voltage_pf != NULL)
-		{
-			awinic_set_rcv_voltage_pf(ucontrol->value.integer.value[0]);
-		}
-	*/
-	return 0;
-}
-
-static int ext_bottom_speaker_voltage_get(struct snd_kcontrol *kcontrol,
+static int ext_amp_boost_volume_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
 	// Refer to ext_bottom_speaker_voltage_function
@@ -3049,20 +3025,19 @@ static int ext_bottom_speaker_voltage_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int ext_bottom_speaker_voltage_put(struct snd_kcontrol *kcontrol,
+static int ext_amp_boost_volume_set(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
-	if (ucontrol->value.integer.value[0] == aw87xxx_spk_voltage){
-		return 1;
-	}
+	int index = 0;
+	int voltage_level = ucontrol->value.integer.value[0];
 
-	if (ucontrol->value.integer.value[0] > 0) {
-		aw87xxx_spk_voltage = ucontrol->value.integer.value[0];
+	if (voltage_level >=0 && voltage_level < AW87XXX_VOLTAGE_LEVEL_COUNT) {
+		index = voltage_level;
 	} else {
-		aw87xxx_spk_voltage = AW87XXX_SPK_VOLTAGE_DEFAULT;
+		index = AW87XXX_VOLTAGE_LEVEL_COUNT - 1;
 	}
 
-	aw87xxx_set_spk_voltage(aw87xxx_spk_voltage);
+	aw87xxx_set_spk_voltage(spk_voltage_value[index]);
 
 	return 0;
 }
@@ -3074,10 +3049,8 @@ static const struct snd_kcontrol_new aw87xxx_snd_controls[] = {
 	SOC_ENUM_EXT("aw87xxx_mode_switch_1", msm_snd_enum[0],
 			aw87xxx_mode_get_1, aw87xxx_mode_set_1),
 	#ifdef OPLUS_AUDIO_PA_BOOST_VOLTAGE
-	SOC_ENUM_EXT("Ext_TOP_Speaker_Voltage", msm_snd_enum[2],
-			ext_top_speaker_voltage_get, ext_top_speaker_voltage_put),
-	SOC_ENUM_EXT("Ext_BOTTOM_Speaker_Voltage", msm_snd_enum[3],
-			ext_bottom_speaker_voltage_get, ext_bottom_speaker_voltage_put),
+	SOC_ENUM_EXT("Ext_Amp_Boost_Volume", msm_snd_enum[2],
+			ext_amp_boost_volume_get, ext_amp_boost_volume_set),
 	#endif /* OPLUS_AUDIO_PA_BOOST_VOLTAGE */
 };
 //#endif /* OPLUS_ARCH_EXTENDS */

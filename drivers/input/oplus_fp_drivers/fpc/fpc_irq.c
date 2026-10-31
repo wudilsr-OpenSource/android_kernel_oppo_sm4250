@@ -22,8 +22,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pm_wakeup.h>
 #include <linux/spi/spi.h>
-#include "../include/oppo_fp_common.h"
-#include <soc/oppo/oppo_project.h>
+#include "../include/oplus_fp_common.h"
+#include <soc/oplus/system/oplus_project.h>
 
 #define FPC_IRQ_DEV_NAME    "fpc_irq"
 
@@ -768,6 +768,7 @@ static int fpc1020_irq_probe(struct platform_device *pldev)
                         &&(FP_FPC_1023_GLASS != get_fpsensor_type())
                         &&(FP_FPC_1270 != get_fpsensor_type())
                         &&(FP_FPC_1511 != get_fpsensor_type())
+                        &&(FP_FPC_1542 != get_fpsensor_type())
                         &&(FP_FPC_1541 != get_fpsensor_type())) {
                 dev_err(dev, "found not fpc sensor\n");
                 rc = -EINVAL;
@@ -842,6 +843,15 @@ static int fpc1020_irq_probe(struct platform_device *pldev)
                 goto ERR_AFTER_WAKELOCK;
         }
 
+        rc = fpc_parse_pwr_list(fpc1020);
+        if (rc) {
+            pr_err("failed to parse power list, rc = %d\n", rc);
+            goto ERR_AFTER_WAKELOCK;
+        }
+        //if (g_use_gpio_power_enable != 1) {
+        fpc_power_on(fpc1020);
+        //}
+        mdelay(1);
         if (g_use_gpio_power_enable == 1) {
         /*get cs resource*/
                 fpc1020->cs_gpio = of_get_named_gpio(pldev->dev.of_node, "fpc,gpio_cs", 0);
@@ -872,15 +882,6 @@ static int fpc1020_irq_probe(struct platform_device *pldev)
                 goto ERR_AFTER_WAKELOCK;
         }
 
-        rc = fpc_parse_pwr_list(fpc1020);
-        if (rc) {
-            pr_err("failed to parse power list, rc = %d\n", rc);
-            goto ERR_AFTER_WAKELOCK;
-        }
-
-        //if (g_use_gpio_power_enable != 1) {
-           fpc_power_on(fpc1020);
-        //}
 
         mdelay(2);
         gpio_set_value(fpc1020->rst_gpio, 1);
@@ -952,7 +953,7 @@ MODULE_DEVICE_TABLE(of, fpc1020_of_match);
 
 static struct of_device_id fpc1020_spi_of_match[] = {
         { .compatible = "fpc,fpc1020", },
-        { .compatible = "oppo,oppo_fp" },
+        { .compatible = "oplus,oplus_fp" },
         {}
 };
 
@@ -992,6 +993,7 @@ static int __init fpc1020_init(void)
                         &&(FP_FPC_1023_GLASS != get_fpsensor_type())
                         &&(FP_FPC_1270 != get_fpsensor_type())
                         &&(FP_FPC_1511 != get_fpsensor_type())
+                        &&(FP_FPC_1542 != get_fpsensor_type())
 			&&(FP_FPC_1541 != get_fpsensor_type())) {
                 pr_err("%s, found not fpc sensor: %d\n", __func__, get_fpsensor_type());
                 return -EINVAL;
@@ -1018,7 +1020,7 @@ static void __exit fpc1020_exit(void)
         //platform_device_unregister(fpc_irq_platform_device);
 }
 
-module_init(fpc1020_init);
+late_initcall(fpc1020_init);
 
 module_exit(fpc1020_exit);
 

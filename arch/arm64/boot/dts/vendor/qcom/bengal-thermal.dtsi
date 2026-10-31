@@ -1108,7 +1108,7 @@
 			};
 
 			skin_modem_trip0: modem-trip0 {
-				temperature = <80000>;
+				temperature = <40000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
@@ -1132,13 +1132,13 @@
 			};
 
 			skin_modem_trip1: modem-trip1 {
-				temperature = <82000>;
+				temperature = <42000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
 
 			skin_modem_trip2: modem-trip2 {
-				temperature = <83000>;
+				temperature = <43000>;
 				hysteresis = <4000>;
 				type = "passive";
 			};
@@ -1162,7 +1162,7 @@
 			};
 
 			skin_modem_trip3: modem-trip3 {
-				temperature = <90000>;
+				temperature = <50000>;
 				hysteresis = <5000>;
 				type = "passive";
 			};

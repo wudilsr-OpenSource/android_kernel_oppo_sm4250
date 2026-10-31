@@ -111,46 +111,21 @@ static struct request *get_req_by_inflight(struct request_queue *q)
 void queue_throtl_add_request(struct request_queue *q,
 					    struct request *rq, bool front)
 {
-	struct list_head *head, *entry;
+	struct list_head *head;
 
 	if (unlikely(!sysctl_uxio_io_opt))
 		return;
 
-	if ((rq->rq_flags & RQF_PM) || (rq->cmd_flags & REQ_UX))
+	if (rq->cmd_flags & REQ_UX)
 		head = &q->ux_head;
 	else if (rq->cmd_flags & REQ_FG)
 		head = &q->fg_head;
 	else
 		head = &q->bg_head;
 
-	if (front) {
-		/*
+	if (front)
 		list_add(&rq->ux_fg_bg_list, head);
-		*/
-		entry = head;
-#ifdef CONFIG_PM
-		/*
-		 * PM requests always stay in front, otherwise they can be
-		 * starved by non-PM requests whose RQF_SOFTBARRIER flag is
-		 * set, see elv_next_request().
-		 */
-		if (rq->q->dev && !(rq->rq_flags & RQF_PM)) {
-			list_for_each(entry, head) {
-				struct request *pos = list_entry_rq(entry);
-
-				/* Found the first non-PM request */
-				if (!(pos->rq_flags & RQF_PM)) {
-					entry = entry->prev;
-					break;
-				}
-
-				if (list_is_last(entry, head))
-					break;
-			}
-		}
-#endif
-		list_add(&rq->ux_fg_bg_list, entry);
-	} else
+	else
 		list_add_tail(&rq->ux_fg_bg_list, head);
 }
 

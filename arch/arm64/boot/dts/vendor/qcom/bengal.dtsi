@@ -390,13 +390,11 @@
 			size = <0x0 0x1000000>;
 		};
 
-		//#ifdef VENDOR_EDIT
 		cdsp_sec_mem: cdsp_sec_regions@46200000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x46200000 0x0 0x1000>;
 		};
-		//#endif /* VENDOR_EDIT */
 
 		secure_display_memory: secure_display_region {
 			compatible = "shared-dma-pool";
@@ -1531,7 +1529,7 @@
 
 		lanes-per-direction = <1>;
 		dev-ref-clk-freq = <0>; /* 19.2 MHz */
-		spm-level = <5>;
+		spm-level = <3>;
 
 		clock-names =
 			"core_clk",

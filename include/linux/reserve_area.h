@@ -52,7 +52,7 @@ extern void dump_mm_info(unsigned long len, unsigned long flags, int dump_vma);
 	if ((mm->va_feature & ANTI_FRAGMENT_AREA) && \
 			(info)->high_limit == mm->mmap_base)  { \
 		unsigned long addr = get_unmmaped_area_from_anti_fragment(mm, info);  \
-		if (!offset_in_page(addr))\
+		if (!offset_in_page(addr)) \
 			return addr; \
 	} \
 } while (0);

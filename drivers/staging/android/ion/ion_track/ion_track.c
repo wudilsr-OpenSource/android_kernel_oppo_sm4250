@@ -3,7 +3,7 @@
  * Copyright (C) 2018-2020 Oplus. All rights reserved.
  */
 
-#if defined(CONFIG_DUMP_TASKS_MEM) && defined(CONFIG_OPPO_HEALTHINFO)
+#ifdef CONFIG_DUMP_TASKS_MEM
 #include <linux/sort.h>
 
 #define ION_DEBUG_LOG_TAG "ion_debug"
@@ -257,8 +257,7 @@ out:
 #else
 void dump_ion_info(char *dump_buff, int len)
 {
-	pr_warn("[ion_debug] CONFIG_DUMP_TASKS_MEM=%d CONFIG_OPPO_HEALTHINFO=%d.\n",
-		IS_ENABLED(CONFIG_DUMP_TASKS_MEM), IS_ENABLED(CONFIG_OPPO_HEALTHINFO));
+	pr_warn("[ion_debug] CONFIG_DUMP_TASKS_MEM is not config.\n");
 }
 #endif
 EXPORT_SYMBOL(dump_ion_info);

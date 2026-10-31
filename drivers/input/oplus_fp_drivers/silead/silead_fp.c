@@ -76,7 +76,7 @@
 #endif
 
 #include "silead_fp.h"
-#include "../include/oppo_fp_common.h"
+#include "../include/oplus_fp_common.h"
 
 #define FP_DEV_NAME "silead_fp"
 #define FP_DEV_MAJOR 0	/* assigned */
@@ -222,9 +222,9 @@ static nav_keymap_t keymap[] = {
     { NAV_KEY_DOWN,     KEY_DOWN,       },
     { NAV_KEY_RIGHT,    KEY_RIGHT,      },
     { NAV_KEY_LEFT,     KEY_LEFT,       },
-    { NAV_KEY_CLICK,    KEY_HOMEPAGE,   },
-    { NAV_KEY_DCLICK,   KEY_HOMEPAGE,   },
-    { NAV_KEY_LONGPRESS,KEY_HOMEPAGE,   },
+    { NAV_KEY_CLICK,    KEY_CAMERA,   },
+    { NAV_KEY_DCLICK,   KEY_CAMERA,   },
+    { NAV_KEY_LONGPRESS,KEY_CAMERA,   },
 };
 
 static LIST_HEAD(device_list);
@@ -1444,7 +1444,7 @@ static const struct of_device_id sildev_dt_ids[] = {
     { .compatible = "sil,silead-fp" },
     { .compatible = "sil,fingerprint" },
     { .compatible = "sil,silead_fp-pins" },
-    { .compatible = "oppo,oppo_fp" },
+    { .compatible = "oplus,oplus_fp" },
     { .compatible = "mediatek,fingerspi-fp" },
     {},
 };
@@ -1472,14 +1472,16 @@ static struct spi_driver silfp_driver = {
 static int __init silfp_dev_init(void)
 {
     int status = 0;
-#if 0
-    if ((FP_SILEAD_OPTICAL_70 != get_fpsensor_type()) && (FP_SILEAD_6157 != get_fpsensor_type()) &&
-        FP_SILEAD_6150 != get_fpsensor_type()) {
+
+    if ((FP_SILEAD_OPTICAL_70 != get_fpsensor_type())
+        && (FP_SILEAD_6157 != get_fpsensor_type())
+        && FP_SILEAD_6150 != get_fpsensor_type()
+        && FP_SILEAD_6159 != get_fpsensor_type()) {
         pr_err("%s, found not silead sensor\n", __func__);
         status = -EINVAL;
         return status;
     }
-#endif
+
     LOG_MSG_DEBUG(ERR_LOG, "SILEAD_FP Driver, Version: %s.\n", FP_DEV_VERSION);
     /* Claim our 256 reserved device numbers.  Then register a class
      * that will key udev/mdev to add/remove /dev nodes.  Last, register

@@ -17,11 +17,19 @@
 #include <linux/suspend.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
-#include <soc/oplus/system/oplus_project.h>
+#include "soc/oplus/system/oplus_project.h"
+#include <linux/input/qpnp-power-on.h>
 #include <linux/debugfs.h>
 #include <linux/module.h>
+#include <linux/version.h>
+#include <linux/pm.h>
+#include <linux/qcom_scm.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#include <soc/oplus/system/qcom_pmicwd.h>
+#else
 #include <linux/regmap.h>
 #include <linux/input/qpnp-power-on.h>
+#endif
 
 #define QPNP_PON_WD_RST_S1_TIMER(pon)		((pon)->base + 0x54)
 #define QPNP_PON_WD_RST_S2_TIMER(pon)		((pon)->base + 0x55)
@@ -35,17 +43,78 @@
 #define QPNP_PON_WD_S1_TIMER_MASK		(0x7F)
 #define QPNP_PON_WD_RESET_PET_MASK		BIT(0)
 
-#define OPPO_PMIC_WD_DEFAULT_TIMEOUT 254
-#define OPPO_PMIC_WD_DEFAULT_ENABLE 0
+#define PMIC_WD_DEFAULT_TIMEOUT 254
+#define PMIC_WD_DEFAULT_ENABLE 0
+
+#define  OPLUS_KE_PROC_ENTRY(name, entry, mode)\
+	({if (!proc_create(#name, S_IFREG | mode, oplus_ke_proc_dir, \
+		&proc_##entry##_fops)){ \
+		pr_info("proc_create %s failed\n", #name);}})
+
+#define OPLUS_KE_FILE_OPS(entry) \
+	static const struct file_operations proc_##entry##_fops = { \
+		.read = proc_##entry##_read, \
+		.write = proc_##entry##_write, \
+	}
+
+static struct proc_dir_entry *oplus_ke_proc_dir;
+
+static ssize_t proc_force_shutdown_read(struct file *file,
+				char __user *buf, size_t size, loff_t *ppos)
+{
+	return 0;
+}
+
+static ssize_t proc_force_shutdown_write(struct file *file,
+			const char __user *buf, size_t size, loff_t *ppos)
+{
+	qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
+
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+	qcom_scm_deassert_ps_hold();
+	#else
+	if (pm_power_off)
+		pm_power_off();
+	#endif
+
+	return 0;
+}
+
+OPLUS_KE_FILE_OPS(force_shutdown);
 
 const struct dev_pm_ops qpnp_pm_ops;
 struct qpnp_pon *sys_reset_dev;
 EXPORT_SYMBOL(sys_reset_dev);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#define PON_GEN3_PBS                            0x08
+#define PON_GEN3_HLOS                           0x09
+#define QPNP_PON_WD_EN                          BIT(7)
+
+static bool is_pon_gen3(struct qpnp_pon *pon)
+{
+        return pon->subtype == PON_GEN3_PBS ||
+                pon->subtype == PON_GEN3_HLOS;
+}
+
 static int oplus_qpnp_pon_wd_config(bool enable)
 {
-	return qpnp_pon_wd_config(enable);
+        if (!sys_reset_dev)
+                return -EPROBE_DEFER;
+
+        if (is_pon_gen3(sys_reset_dev))
+                return -EPERM;
+
+        return qpnp_pon_masked_write(sys_reset_dev,
+                                QPNP_PON_WD_RST_S2_CTL2(sys_reset_dev),
+                                QPNP_PON_WD_EN, enable ? QPNP_PON_WD_EN : 0);
 }
+#else
+static int oplus_qpnp_pon_wd_config(bool enable)
+{
+        return qpnp_pon_wd_config(enable);
+}
+#endif
 
 int qpnp_pon_wd_timer(unsigned char timer, enum pon_power_off_type reset_type)
 {
@@ -121,7 +190,7 @@ static int pmicwd_kthread(void *arg)
 		qpnp_pon_wd_pet();
 
 		if((pon->suspend_state & 0x0F) >= 1)
-			panic("oppo suspend resume state %d\n", pon->suspend_state);
+			panic("suspend resume state %d\n", pon->suspend_state);
 		else if(pon->suspend_state & 0xF0)
 			pon->suspend_state ++;
 
@@ -190,7 +259,7 @@ static ssize_t pmicwd_proc_write(struct file *file, const char __user *buf,
 		return count;
 	}
 	if(tmp_timeout < 60 || tmp_timeout > 255){
-		tmp_timeout = OPPO_PMIC_WD_DEFAULT_TIMEOUT;
+		tmp_timeout = PMIC_WD_DEFAULT_TIMEOUT;
 	}
 	if(tmp_rstypt >= PON_POWER_OFF_MAX_TYPE || tmp_rstypt <= PON_POWER_OFF_RESERVED){
 		if (get_eng_version() == AGING) {
@@ -229,14 +298,14 @@ static ssize_t pmicwd_proc_write(struct file *file, const char __user *buf,
 	return count;
 }
 
-void oppo_set_pmicWd_state(int enable)
+void set_pmicWd_state(int enable)
 {
 	struct qpnp_pon *pon = sys_reset_dev;
 	unsigned int new_state;
 
 	new_state = (pon->pmicwd_state & ~0x1) | (enable & 0x1);
 
-	dev_info(pon->dev, "oppo_set_pmicWd_state:old:%x new:%x\n", pon->pmicwd_state,new_state);
+	dev_info(pon->dev, "set_pmicWd_state:old:%x new:%x\n", pon->pmicwd_state, new_state);
 	if(new_state == pon->pmicwd_state)
 		return ;
 
@@ -261,6 +330,7 @@ void oppo_set_pmicWd_state(int enable)
 	qpnp_pon_wd_pet();
 	mutex_unlock(&pon->wd_task_mutex);
 }
+EXPORT_SYMBOL(set_pmicWd_state);
 
 /*
  * This function is register as callback function to get notifications
@@ -387,6 +457,13 @@ void pmicwd_init(struct platform_device *pdev, struct qpnp_pon *pon, bool sys_re
 	u32 pon_rt_sts = 0;
 	int rc;
 
+	oplus_ke_proc_dir = proc_mkdir("oplus_ke", NULL);
+	if (oplus_ke_proc_dir == NULL) {
+		pr_info("oplus_ke proc_mkdir failed\n");
+	}
+
+	OPLUS_KE_PROC_ENTRY(force_shutdown, force_shutdown, 0600);
+
 	if (!pon){
 		return;
 	}
@@ -399,21 +476,21 @@ void pmicwd_init(struct platform_device *pdev, struct qpnp_pon *pon, bool sys_re
 	dev_info(pon->dev, "%s: sys_reset = 0x%x, pon pmicwd_state = 0x%x\n", __func__, sys_reset, pon->pmicwd_state);
 	if(sys_reset && pon->pmicwd_state){
 		if (get_eng_version() == AGING) {
-			pon->pmicwd_state = OPPO_PMIC_WD_DEFAULT_ENABLE | (OPPO_PMIC_WD_DEFAULT_TIMEOUT << 8) |
+			pon->pmicwd_state = PMIC_WD_DEFAULT_ENABLE | (PMIC_WD_DEFAULT_TIMEOUT << 8) |
 				(PON_POWER_OFF_WARM_RESET << 16);
 		} else {
-			pon->pmicwd_state = OPPO_PMIC_WD_DEFAULT_ENABLE | (OPPO_PMIC_WD_DEFAULT_TIMEOUT << 8) |
+			pon->pmicwd_state = PMIC_WD_DEFAULT_ENABLE | (PMIC_WD_DEFAULT_TIMEOUT << 8) |
 				(PON_POWER_OFF_HARD_RESET << 16);
 		}
 		proc_create("pmicWd", 0666, NULL, &pmicwd_proc_fops);
 		mutex_init(&pon->wd_task_mutex);
-		#if OPPO_PMIC_WD_DEFAULT_ENABLE
+		#if PMIC_WD_DEFAULT_ENABLE
 		pon->wd_task = kthread_create(pmicwd_kthread, pon,"pmicwd");
 		if(pon->wd_task){
 			if (get_eng_version() == AGING) {
-				qpnp_pon_wd_timer(OPPO_PMIC_WD_DEFAULT_TIMEOUT, PON_POWER_OFF_WARM_RESET);
+				qpnp_pon_wd_timer(PMIC_WD_DEFAULT_TIMEOUT, PON_POWER_OFF_WARM_RESET);
 			} else {
-				qpnp_pon_wd_timer(OPPO_PMIC_WD_DEFAULT_TIMEOUT, PON_POWER_OFF_HARD_RESET);
+				qpnp_pon_wd_timer(PMIC_WD_DEFAULT_TIMEOUT, PON_POWER_OFF_HARD_RESET);
 			}
 			oplus_qpnp_pon_wd_config(1);
 			wake_up_process(pon->wd_task);

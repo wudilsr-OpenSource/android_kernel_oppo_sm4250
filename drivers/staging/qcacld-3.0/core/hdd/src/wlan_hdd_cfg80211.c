@@ -153,10 +153,10 @@
 #include <qdf_hang_event_notifier.h>
 #include "hif.h"
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_INJECT
 //Add for: hotspot manager
 #include <wlan_hdd_hostapd_wext.h>
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_INJECT */
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -13835,43 +13835,43 @@ put_attr_fail:
 	return -EINVAL;
 }
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_INJECT
 //Add for: hotspot manager
 static const struct nla_policy
-oppo_attr_policy[OPPO_WLAN_VENDOR_ATTR_MAX + 1] = {
-	[OPPO_WLAN_VENDOR_ATTR_MAC_ADDR] = {.type = NLA_BINARY, .len = QDF_MAC_ADDR_SIZE},
-	[OPPO_WLAN_VENDOR_ATTR_WETHER_BLOCK_CLIENT] = {.type = NLA_U8},
-	[OPPO_WLAN_VENDOR_ATTR_SAP_MAX_CLIENT_NUM] = {.type = NLA_U32},
+oplus_attr_policy[OPLUS_WLAN_VENDOR_ATTR_MAX + 1] = {
+	[OPLUS_WLAN_VENDOR_ATTR_MAC_ADDR] = {.type = NLA_BINARY, .len = QDF_MAC_ADDR_SIZE},
+	[OPLUS_WLAN_VENDOR_ATTR_WETHER_BLOCK_CLIENT] = {.type = NLA_U8},
+	[OPLUS_WLAN_VENDOR_ATTR_SAP_MAX_CLIENT_NUM] = {.type = NLA_U32},
 };
 
-static int __wlan_hdd_cfg80211_oppo_modify_acl(struct wiphy *wiphy,
+static int __wlan_hdd_cfg80211_oplus_modify_acl(struct wiphy *wiphy,
 					struct wireless_dev *wdev,
 					const void *data, int data_len)
 {
 	int32_t status;
-	struct nlattr* tb[OPPO_WLAN_VENDOR_ATTR_MAX + 1];
+	struct nlattr* tb[OPLUS_WLAN_VENDOR_ATTR_MAX + 1];
 	uint8_t extra[8];
 	int8_t block;
 
 	hdd_enter();
 
-	status = wlan_cfg80211_nla_parse(tb, OPPO_WLAN_VENDOR_ATTR_MAX,
-					data, data_len, oppo_attr_policy);
+	status = wlan_cfg80211_nla_parse(tb, OPLUS_WLAN_VENDOR_ATTR_MAX,
+					data, data_len, oplus_attr_policy);
 	if (status) {
 		hdd_err("Invalid attributes!");
 		status = -EINVAL;
 		goto out;
 	}
 
-	if (tb[OPPO_WLAN_VENDOR_ATTR_MAC_ADDR]) {
-		nla_memcpy(extra, tb[OPPO_WLAN_VENDOR_ATTR_MAC_ADDR], QDF_MAC_ADDR_SIZE);
+	if (tb[OPLUS_WLAN_VENDOR_ATTR_MAC_ADDR]) {
+		nla_memcpy(extra, tb[OPLUS_WLAN_VENDOR_ATTR_MAC_ADDR], QDF_MAC_ADDR_SIZE);
 	} else {
 		hdd_err("Invalid argument:No sta mac addr provided!");
 		status = -EINVAL;
 		goto out;
 	}
-	if (tb[OPPO_WLAN_VENDOR_ATTR_WETHER_BLOCK_CLIENT]) {
-		block = nla_get_u8(tb[OPPO_WLAN_VENDOR_ATTR_WETHER_BLOCK_CLIENT]);
+	if (tb[OPLUS_WLAN_VENDOR_ATTR_WETHER_BLOCK_CLIENT]) {
+		block = nla_get_u8(tb[OPLUS_WLAN_VENDOR_ATTR_WETHER_BLOCK_CLIENT]);
 	} else {
 		hdd_err("Invalid argument:No block value!");
 		status = -EINVAL;
@@ -13882,7 +13882,7 @@ static int __wlan_hdd_cfg80211_oppo_modify_acl(struct wiphy *wiphy,
 	extra[6] = 0;
 	extra[7] = block;
 
-	status = oppo_wlan_hdd_modify_acl(wdev->netdev, (char*)extra);
+	status = oplus_wlan_hdd_modify_acl(wdev->netdev, (char*)extra);
 	if (0 != status) {
 		hdd_err("failed to modify acl! %d", status);
 		goto out;
@@ -13894,7 +13894,7 @@ out:
 }
 
 /**
- * wlan_hdd_cfg80211_oppo_modify_acl() - modify acl
+ * wlan_hdd_cfg80211_oplus_modify_acl() - modify acl
  * @wiphy: Pointer to wiphy
  * @wdev: Pointer to wireless device
  * @data: vendor command extra data
@@ -13902,7 +13902,7 @@ out:
  *
  * Return: 0 for success, non-zero for failure
  */
-static int wlan_hdd_cfg80211_oppo_modify_acl(struct wiphy *wiphy,
+static int wlan_hdd_cfg80211_oplus_modify_acl(struct wiphy *wiphy,
 				  struct wireless_dev *wdev,
 				  const void *data, int data_len)
 {
@@ -13913,26 +13913,26 @@ static int wlan_hdd_cfg80211_oppo_modify_acl(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_oppo_modify_acl(wiphy, wdev, data, data_len);
+	errno = __wlan_hdd_cfg80211_oplus_modify_acl(wiphy, wdev, data, data_len);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
 }
 
-static int __wlan_hdd_cfg80211_oppo_set_max_assoc(struct wiphy *wiphy,
+static int __wlan_hdd_cfg80211_oplus_set_max_assoc(struct wiphy *wiphy,
 					  struct wireless_dev *wdev,
 					  const void *data, int data_len)
 {
 	uint32_t status;
 	int extra[2];
 	uint32_t max_clients;
-	struct nlattr* tb[OPPO_WLAN_VENDOR_ATTR_MAX + 1];
+	struct nlattr* tb[OPLUS_WLAN_VENDOR_ATTR_MAX + 1];
 
 	hdd_enter();
 
-	status = wlan_cfg80211_nla_parse(tb, OPPO_WLAN_VENDOR_ATTR_MAX,
-					data, data_len, oppo_attr_policy);
+	status = wlan_cfg80211_nla_parse(tb, OPLUS_WLAN_VENDOR_ATTR_MAX,
+					data, data_len, oplus_attr_policy);
 
 	if (status) {
 		hdd_err("Invalid attributes!");
@@ -13940,8 +13940,8 @@ static int __wlan_hdd_cfg80211_oppo_set_max_assoc(struct wiphy *wiphy,
 		goto out;
 	}
 
-	if (tb[OPPO_WLAN_VENDOR_ATTR_SAP_MAX_CLIENT_NUM]) {
-		max_clients = nla_get_u32(tb[OPPO_WLAN_VENDOR_ATTR_SAP_MAX_CLIENT_NUM]);
+	if (tb[OPLUS_WLAN_VENDOR_ATTR_SAP_MAX_CLIENT_NUM]) {
+		max_clients = nla_get_u32(tb[OPLUS_WLAN_VENDOR_ATTR_SAP_MAX_CLIENT_NUM]);
 	} else {
 		hdd_err("Invalid argument!");
 		status = -EINVAL;
@@ -13951,7 +13951,7 @@ static int __wlan_hdd_cfg80211_oppo_set_max_assoc(struct wiphy *wiphy,
 	extra[0] = QCSAP_PARAM_MAX_ASSOC;
 	extra[1] = max_clients;
 
-	status = oppo_wlan_hdd_set_max_assoc(wdev->netdev, (char*)extra);
+	status = oplus_wlan_hdd_set_max_assoc(wdev->netdev, (char*)extra);
 	if (0 != status) {
 		hdd_err("failed to set max assoc!");
 		goto out;
@@ -13963,7 +13963,7 @@ out:
 }
 
 /**
- * wlan_hdd_cfg80211_oppo_set_max_assoc() - modify acl
+ * wlan_hdd_cfg80211_oplus_set_max_assoc() - modify acl
  * @wiphy: Pointer to wiphy
  * @wdev: Pointer to wireless device
  * @data: vendor command extra data
@@ -13971,7 +13971,7 @@ out:
  *
  * Return: 0 for success, non-zero for failure
  */
-static int wlan_hdd_cfg80211_oppo_set_max_assoc(struct wiphy *wiphy,
+static int wlan_hdd_cfg80211_oplus_set_max_assoc(struct wiphy *wiphy,
 					  struct wireless_dev *wdev,
 					  const void *data, int data_len)
 {
@@ -13982,13 +13982,13 @@ static int wlan_hdd_cfg80211_oppo_set_max_assoc(struct wiphy *wiphy,
 	if (errno)
 		return errno;
 
-	errno = __wlan_hdd_cfg80211_oppo_set_max_assoc(wiphy, wdev, data, data_len);
+	errno = __wlan_hdd_cfg80211_oplus_set_max_assoc(wiphy, wdev, data, data_len);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
 }
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_INJECT */
 
 /**
  * __wlan_hdd_cfg80211_get_nud_stats() - get arp stats command to firmware
@@ -15450,25 +15450,25 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = wlan_hdd_cfg80211_get_chain_rssi
 	},
-	#ifdef VENDOR_EDIT
+	#ifdef OPLUS_ARCH_INJECT
 	//add for: hotspot manager via wificond
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
-		.info.subcmd = OPPO_NL80211_VENDOR_SUBCMD_MODIFY_ACL,
+		.info.subcmd = OPLUS_NL80211_VENDOR_SUBCMD_MODIFY_ACL,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_NETDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
-		.doit = wlan_hdd_cfg80211_oppo_modify_acl
+		.doit = wlan_hdd_cfg80211_oplus_modify_acl
 	},
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
-		.info.subcmd = OPPO_NL80211_VENDOR_SUBCMD_SET_MAX_ASSOC,
+		.info.subcmd = OPLUS_NL80211_VENDOR_SUBCMD_SET_MAX_ASSOC,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 		     WIPHY_VENDOR_CMD_NEED_NETDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
-		.doit = wlan_hdd_cfg80211_oppo_set_max_assoc
+		.doit = wlan_hdd_cfg80211_oplus_set_max_assoc
 	},
-    #endif /* VENDOR_EDIT */
+    #endif /* OPLUS_ARCH_INJECT */
 
 	FEATURE_ACTIVE_TOS_VENDOR_COMMANDS
 	FEATURE_NAN_VENDOR_COMMANDS

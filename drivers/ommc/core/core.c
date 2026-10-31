@@ -53,10 +53,6 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-#include "../host/sdInfo/sdinfo.h"
-#endif
-
 /* The max erase timeout, used when host->max_busy_timeout isn't specified */
 #define MMC_ERASE_TIMEOUT_MS	(60 * 1000) /* 60 s */
 
@@ -1318,18 +1314,6 @@ void mmc_wait_for_req_done(struct mmc_host *host, struct mmc_request *mrq)
 				       mmc_hostname(host), __func__);
 			}
 		}
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-		if (host && host->card && mmc_card_sd(host->card)) {
-			if ((mrq->cmd && (mrq->cmd->error == -ETIMEDOUT)) || (mrq->stop && (mrq->stop->error == -ETIMEDOUT)) || (mrq->sbc && (mrq->sbc->error == -ETIMEDOUT)))
-				sdinfo.cmd_timeout_count += 1;
-			else if ((mrq->cmd && (mrq->cmd->error == -EILSEQ)) || (mrq->stop && (mrq->stop->error == -EILSEQ)) || (mrq->sbc && (mrq->sbc->error == -EILSEQ)))
-				sdinfo.cmd_crc_err_count += 1;
-			else if (mrq->data && (mrq->data->error == -ETIMEDOUT))
-				sdinfo.data_timeout_int_count +=1;
-			else if (mrq->data && (mrq->data->error == -EILSEQ))
-				sdinfo.data_crc_err_count += 1;
-		}
-#endif
 		if (!cmd->error || !cmd->retries ||
 		    mmc_card_removed(host->card))
 			break;

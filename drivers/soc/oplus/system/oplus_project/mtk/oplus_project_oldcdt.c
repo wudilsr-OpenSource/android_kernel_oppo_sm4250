@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -16,13 +20,12 @@
 #include <soc/oplus/system/oplus_project_oldcdt.h>
 
 
-/////////////////////////////////////////////////////////////
-//static struct proc_dir_entry *oppo_info = NULL;
-extern struct proc_dir_entry *oppo_info;
+extern struct proc_dir_entry *oplus_info;
 ProjectInfoCDTType_oldcdt *format = NULL;
 
+/*Add for diff manifest*/
 static const char* nfc_feature = "nfc_feature";
-static const char* feature_src = "/vendor/etc/nfc/com.oppo.nfc_feature.xml";
+static const char* feature_src = "/vendor/etc/nfc/com.oplus.nfc_feature.xml";
 
 static ProjectInfoCDTType_oldcdt projectInfo = {
 	.nProject		= 0,
@@ -33,18 +36,19 @@ static ProjectInfoCDTType_oldcdt projectInfo = {
 	.isConfidential         = 1,
 };
 
+/*Add for diff manifest*/
 static int __init update_feature(void)
 {
 	mm_segment_t fs;
 	fs = get_fs();
 	pr_err("%s: oldcdt -- Operator Version [%d]\n", __func__, (get_project()));
 	set_fs(KERNEL_DS);
-	if (oppo_info) {
+	if (oplus_info) {
             //#ifdef OPLUS_BUG_STABILITY
             //18073 includes 18073,18075,18593
             //19011 includes 19011,19305 exclude 19301
             if (get_project() == 18073 || (get_project() == 19011 && get_Operator_Version() != 80)) {
-                proc_symlink(nfc_feature, oppo_info, feature_src);
+                proc_symlink(nfc_feature, oplus_info, feature_src);
             }
             //#endif /* OPLUS_BUG_STABILITY */
 	}
@@ -123,7 +127,7 @@ static int init_project_version_oldcdt(void)
 unsigned int get_project_oldcdt(void)
 {
 	if (format == NULL) {
-		oppo_project_init_oldcdt();
+		oplus_project_init_oldcdt();
 	}
 	if(format)
 		return format->nProject;
@@ -140,9 +144,6 @@ unsigned int is_project_oldcdt(int project )
 
 unsigned int get_PCB_Version_oldcdt(void)
 {
-	if (format == NULL) {
-		oppo_project_init_oldcdt();
-	}
 	if(format)
 		return format->nPCBVersion;
 	return 0;
@@ -150,9 +151,6 @@ unsigned int get_PCB_Version_oldcdt(void)
 
 unsigned int get_Modem_Version_oldcdt(void)
 {
-	if (format == NULL) {
-		oppo_project_init_oldcdt();
-	}
 	if(format)
 		return format->nModem;
 	return 0;
@@ -161,7 +159,7 @@ unsigned int get_Modem_Version_oldcdt(void)
 unsigned int get_Operator_Version_oldcdt(void)
 {
 	if (format == NULL) {
-		oppo_project_init_oldcdt();
+		oplus_project_init_oldcdt();
 	}
 	if(format)
 		return format->nOperator;
@@ -170,24 +168,18 @@ unsigned int get_Operator_Version_oldcdt(void)
 
 unsigned int get_eng_version_oldcdt(void)
 {
-	if (format == NULL) {
-		oppo_project_init_oldcdt();
-	}
 	if(format)
 		return format->nENGVersion;
 	return 0;
 }
 
-bool oppo_daily_build_oldcdt(void)
+bool oplus_daily_build_oldcdt(void)
 {
 	return false;
 }
 
 int is_confidential_oldcdt(void)
 {
-	if (format == NULL) {
-		oppo_project_init_oldcdt();
-	}
 	if(format)
 		return format->isConfidential;
 	return 1;
@@ -397,6 +389,7 @@ static struct file_operations secureType_proc_fops = {
 	.read = secureType_read_proc,
 };
 
+/*Add serialID for fastboot unlock*/
 #define SERIALNO_LEN 16
 extern char *saved_command_line;
 static ssize_t serialID_read_proc(struct file *file, char __user *buf,
@@ -432,7 +425,7 @@ struct file_operations serialID_proc_fops = {
         .read = serialID_read_proc,
 };
 
-int oppo_project_init_oldcdt(void)
+int oplus_project_init_oldcdt(void)
 {
 	int ret = 0;
 	struct proc_dir_entry *pentry;
@@ -443,54 +436,55 @@ int oppo_project_init_oldcdt(void)
 		goto init_project_fail;
 	}
 
-	if (oppo_info == NULL) {
-		pr_err("oppo_info == NULL, maybe wrong state\n");
-		oppo_info =  proc_mkdir("oppoVersion", NULL);
-		if(oppo_info == NULL) {
-			pr_err("can't create oppo_info proc\n");
+	if (oplus_info == NULL) {
+		pr_err("oplus_info == NULL, maybe wrong state\n");
+		oplus_info =  proc_mkdir("oplusVersion", NULL);
+		if(oplus_info == NULL) {
+			pr_err("can't create oplus_info proc\n");
 			goto ERROR_INIT_VERSION;
 		}
         } else {
-		pr_err("oppo_info != NULL, going on\n");
+		pr_err("oplus_info != NULL, going on\n");
 	}
 
-	pentry = proc_create("prjVersion", S_IRUGO, oppo_info, &prjVersion_proc_fops);
+	pentry = proc_create("prjVersion", S_IRUGO, oplus_info, &prjVersion_proc_fops);
 	if(!pentry) {
 		pr_err("create prjVersion proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
 
-	pentry = proc_create("pcbVersion", S_IRUGO, oppo_info, &pcbVersion_proc_fops);
+	pentry = proc_create("pcbVersion", S_IRUGO, oplus_info, &pcbVersion_proc_fops);
 	if(!pentry) {
 		pr_err("create pcbVersion proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
-	pentry = proc_create("engVersion", S_IRUGO, oppo_info, &engVersion_proc_fops);
+	pentry = proc_create("engVersion", S_IRUGO, oplus_info, &engVersion_proc_fops);
 	if(!pentry) {
 		pr_err("create engVersion proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
-	pentry = proc_create("isConfidential", S_IRUGO, oppo_info, &isConfidential_proc_fops);
+	pentry = proc_create("isConfidential", S_IRUGO, oplus_info, &isConfidential_proc_fops);
 	if(!pentry) {
 		pr_err("create is_confidential proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
-	pentry = proc_create("operatorName", S_IRUGO, oppo_info, &operatorName_proc_fops);
+	pentry = proc_create("operatorName", S_IRUGO, oplus_info, &operatorName_proc_fops);
 	if(!pentry) {
 		pr_err("create operatorName proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
-	pentry = proc_create("modemType", S_IRUGO, oppo_info, &modemType_proc_fops);
+	pentry = proc_create("modemType", S_IRUGO, oplus_info, &modemType_proc_fops);
 	if(!pentry) {
 		pr_err("create modemType proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
-	pentry = proc_create("secureType", S_IRUGO, oppo_info, &secureType_proc_fops);
+	pentry = proc_create("secureType", S_IRUGO, oplus_info, &secureType_proc_fops);
 	if(!pentry) {
 		pr_err("create secureType proc failed.\n");
 		//goto ERROR_INIT_VERSION;
 	}
-	pentry = proc_create("serialID", S_IRUGO, oppo_info, &serialID_proc_fops);
+/*Add serialID for fastboot unlock*/
+	pentry = proc_create("serialID", S_IRUGO, oplus_info, &serialID_proc_fops);
 	if(!pentry) {
 		pr_err("create serialID proc failed.\n");
 		//goto ERROR_INIT_VERSION;
@@ -498,15 +492,14 @@ int oppo_project_init_oldcdt(void)
 	pr_err("%s success\n", __func__);
 	return ret;
 ERROR_INIT_VERSION:
-	//remove_proc_entry("oppo_info", NULL);
+	//remove_proc_entry("oplus_info", NULL);
 init_project_fail:
-	oppo_info = NULL;
+	oplus_info = NULL;
 	format = NULL;
 	return -ENOENT;
 }
 
-//core_initcall(boot_oppo_project_core);
 
-MODULE_DESCRIPTION("OPPO project oldcdt version");
+MODULE_DESCRIPTION("OPLUS project oldcdt version");
 MODULE_LICENSE("GPL v2");
-MODULE_AUTHOR("Joshua");
+MODULE_AUTHOR("DJ");

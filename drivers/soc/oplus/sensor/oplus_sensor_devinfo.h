@@ -26,7 +26,7 @@
 #define REG_NUM 10
 #define PARAMETER_NUM 25
 #define FEATURE_NUM 10
-#define SOURCE_NUM 2
+#define SOURCE_NUM 3
 #define ALGO_PARAMETER_NUM 15
 #define ALGO_FEATURE_NUM  5
 #define DEFAULT_CONFIG 0xff
@@ -50,6 +50,8 @@ enum sensor_id {
     OPLUS_CCT,
     OPLUS_CCT_REAR,
     OPLUS_BAROMETER,
+    OPLUS_SARS,
+    OPLUS_LIGHT_REAR,
     SENSORS_NUM
 };
 
@@ -60,6 +62,8 @@ enum sensor_algo_id {
     OPLUS_FP_DISPLAY,
     OPLUS_FREE_FALL,
     OPLUS_CAMERA_PROTECT,
+    OPLUS_MAG_FUSION,
+    OPLUS_MEASUREMENT,
     SENSOR_ALGO_NUM
 };
 
@@ -68,17 +72,20 @@ enum  {
     TCS3701 = 0x02,
     TCS3408 = 0x04,
     STK3A6X = 0x08,
+    STK3329 = 0x10,
 };
 
 enum {
     LSM6DSM = 0x01,
     BMI160 = 0x02,
-    LSM6DS3 = 0x04,
+    LSM6DS3_C = 0x04,
     BMI260 = 0x08,
     LSM6DSO = 0x10,
-    LIS2HH12 = 0x20,
-    BMA420 = 0x40,
+    ICM4X6XX = 0x20,
+    ICM4X607 = 0x40,
     BMI3X0 = 0x80,
+    LIS2HH12 = 0x81,
+    BMA420 = 0x82,
 };
 
 enum {
@@ -94,11 +101,16 @@ enum {
 
 enum {
     SX9324 = 0x01,
+    SX9331 = 0x02
 };
 
 enum {
     CCT_TCS3408 = 0x01,
     CCT_STK37600 = 0x02
+};
+
+enum {
+    TSL2540 = 0x01,
 };
 
 struct sensor_feature {

@@ -9,7 +9,7 @@
 	compatible = "qcom,bengal-qrd", "qcom,bengal", "qcom,qrd";
 	qcom,board-id = <0x1000B 0>;
 	oplus,dtsi_no = <20211>;
-	oplus,pcb-legancy-version = <1>; // before evt2
+	oplus,pcb-legacy-version = <1>; // before evt2
 };
 
 #include "sensor/rum-20211-sensor-mtp.dtsi"

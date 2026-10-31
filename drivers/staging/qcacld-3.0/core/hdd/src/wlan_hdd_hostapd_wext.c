@@ -1466,7 +1466,7 @@ int iw_softap_modify_acl(struct net_device *dev,
 #endif /* MAC_ADDR_ARRAY */
 
 static
-int __oppo_iw_softap_modify_acl(struct net_device *dev,
+int __oplus_iw_softap_modify_acl(struct net_device *dev,
 			   struct iw_request_info *info,
 			   union iwreq_data *wrqu, char *extra)
 {
@@ -1507,7 +1507,7 @@ int __oppo_iw_softap_modify_acl(struct net_device *dev,
 }
 
 int
-static __oppo_iw_softap_setparam(struct net_device *dev,
+static __oplus_iw_softap_setparam(struct net_device *dev,
 			    struct iw_request_info *info,
 			    union iwreq_data *wrqu, char *extra)
 {
@@ -1560,7 +1560,7 @@ static __oppo_iw_softap_setparam(struct net_device *dev,
 }
 
 //Add for: hotspot manager
-int oppo_wlan_hdd_modify_acl(struct net_device *dev, char *extra)
+int oplus_wlan_hdd_modify_acl(struct net_device *dev, char *extra)
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -1569,14 +1569,14 @@ int oppo_wlan_hdd_modify_acl(struct net_device *dev, char *extra)
 	if (errno)
 		return errno;
 
-	errno = __oppo_iw_softap_modify_acl(dev, NULL, NULL, extra);
+	errno = __oplus_iw_softap_modify_acl(dev, NULL, NULL, extra);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 
 	return errno;
 }
 
-int oppo_wlan_hdd_set_max_assoc(struct net_device *dev, char* extra)
+int oplus_wlan_hdd_set_max_assoc(struct net_device *dev, char* extra)
 {
 	int errno;
 	struct osif_vdev_sync *vdev_sync;
@@ -1585,7 +1585,7 @@ int oppo_wlan_hdd_set_max_assoc(struct net_device *dev, char* extra)
 	if (errno)
 		return errno;
 
-	errno = __oppo_iw_softap_setparam(dev, NULL, NULL, extra);
+	errno = __oplus_iw_softap_setparam(dev, NULL, NULL, extra);
 
 	osif_vdev_sync_op_stop(vdev_sync);
 

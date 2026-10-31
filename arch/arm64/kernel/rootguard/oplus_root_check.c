@@ -60,7 +60,8 @@ void oplus_root_check_succ(uid_t uid, uid_t euid, uid_t fsuid, uid_t callnum)
 
 
 	dcs_event->payload_length = snprintf(dcs_event_payload,256,
-	    "%d$$old_euid@@%d$$old_fsuid@@%d$$sys_call_number@@%d$$addr_limit@@%lx$$curr_uid@@%d$$curr_euid@@%d$$curr_fsuid@@%d$$curr_name@@%s$$ppid@@%d$$ppidname@@%s$$enforce@@%d\n",
+	      "%u$$old_euid@@%u$$old_fsuid@@%u$$sys_call_number@@%u$$addr_limit@@%lx\
+	$$curr_uid@@%u$$curr_euid@@%u$$curr_fsuid@@%u$$curr_name@@%s$$ppid@@%d$$ppidname@@%s$$enforce@@%d",
 	    uid,euid,fsuid,callnum,
 	    get_fs(),current_uid().val,current_euid().val,current_fsuid().val,get_task_comm(comm, current), ppid, nameofppid,selinux_is_enabled());
 	printk(KERN_INFO "oplus_root_check_succ,payload:%s\n",dcs_event_payload);
@@ -72,8 +73,6 @@ void oplus_root_check_succ(uid_t uid, uid_t euid, uid_t fsuid, uid_t callnum)
 	}
 
 	kfree(dcs_event_payload);
-
-	msleep(5000);
 
 	return;
 }

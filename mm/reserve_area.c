@@ -15,9 +15,6 @@
 #ifdef CONFIG_OPLUS_HEALTHINFO
 #include <soc/oplus/healthinfo.h>
 #endif
-#ifdef CONFIG_OPPO_HEALTHINFO
-#include <soc/oplus/oppo_healthinfo.h>
-#endif
 #include <linux/version.h>
 #define STACK_RLIMIT_OVERFFLOW (32<<20)
 #define THRIDPART_APP_UID_LOW_LIMIT 10000UL
@@ -144,7 +141,7 @@ int create_reserved_area_enable_proc(struct proc_dir_entry *parent)
 }
 EXPORT_SYMBOL(create_reserved_area_enable_proc);
 
-#if defined(CONFIG_OPLUS_HEALTHINFO) || defined(CONFIG_OPPO_HEALTHINFO)
+#ifdef CONFIG_OPLUS_HEALTHINFO
 void trigger_svm_oom_event(struct mm_struct *mm, bool brk_risk, bool is_locked)
 {
 	int len = 0;

@@ -12,7 +12,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/timer.h>
 #include <linux/err.h>
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 
 #include "gf_spi.h"
 
@@ -23,16 +23,6 @@
 #include <linux/platform_device.h>
 #endif
 
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-static struct pinctrl *pinctrl;
-static struct pinctrl_state *pins_power_on;
-static struct pinctrl_state *pins_power_off;
-static struct pinctrl_state *pins_1P8_power_on;
-static struct pinctrl_state *pins_1P8_power_off;
-static struct pinctrl_state *pins_reset_on;
-static struct pinctrl_state *pins_reset_off;
-
-#else
 static int vreg_setup(struct gf_dev *goodix_fp, fp_power_info_t *pwr_info,
         bool enable)
 {
@@ -89,7 +79,6 @@ static int vreg_setup(struct gf_dev *goodix_fp, fp_power_info_t *pwr_info,
     }
     return rc;
 }
-#endif
 
 void gf_cleanup_pwr_list(struct gf_dev* gf_dev) {
     unsigned index = 0;
@@ -308,45 +297,6 @@ int gf_parse_dts(struct gf_dev* gf_dev)
     struct device *dev = &gf_dev->spi->dev;
     struct device_node *np = dev->of_node;
 
-/*get reset resource */
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-
-    pinctrl = devm_pinctrl_get(&gf_dev->spi->dev);
-    if (IS_ERR_OR_NULL(pinctrl)) {
-            dev_err(&gf_dev->spi->dev,
-            "%s: get pinctrl failed\n", __func__);
-        }
-
-    pins_power_on = pinctrl_lookup_state(pinctrl, "fp_power_enable");
-    if (IS_ERR_OR_NULL(pins_power_on)) {
-        dev_err(&gf_dev->spi->dev, "%s: loockup failed\n", __func__);
-    }
-
-    pins_power_off = pinctrl_lookup_state(pinctrl, "fp_power_disable");
-    if (IS_ERR_OR_NULL(pins_power_on)) {
-        dev_err(&gf_dev->spi->dev, "%s: loockup failed\n", __func__);
-    }
-
-    pins_1P8_power_on = pinctrl_lookup_state(pinctrl, "fp_1P8_power_enable");
-    if (IS_ERR_OR_NULL(pins_1P8_power_on)) {
-        dev_err(&gf_dev->spi->dev, "%s: loockup 1P8 failed\n", __func__);
-    }
-
-    pins_1P8_power_off = pinctrl_lookup_state(pinctrl, "fp_1P8_power_disable");
-    if (IS_ERR_OR_NULL(pins_1P8_power_on)) {
-        dev_err(&gf_dev->spi->dev, "%s: loockup 1P8 failed\n", __func__);
-    }
-
-    pins_reset_on = pinctrl_lookup_state(pinctrl, "fp_reset_enable");
-    if (IS_ERR_OR_NULL(pins_power_on)) {
-        dev_err(&gf_dev->spi->dev, "%s: loockup failed\n", __func__);
-    }
-
-    pins_reset_off = pinctrl_lookup_state(pinctrl, "fp_reset_disable");
-    if (IS_ERR_OR_NULL(pins_power_on)) {
-        dev_err(&gf_dev->spi->dev, "%s: loockup failed\n", __func__);
-    }
-#else
     gf_dev->reset_gpio = of_get_named_gpio(np, "goodix,gpio_reset", 0);
     if (gf_dev->reset_gpio < 0) {
         pr_err("falied to get reset gpio!\n");
@@ -360,7 +310,6 @@ int gf_parse_dts(struct gf_dev* gf_dev)
     }
     gpio_direction_output(gf_dev->reset_gpio, 0);
 
-#endif
     gf_dev->irq_gpio = of_get_named_gpio(np, "goodix,gpio_irq", 0);
     if (gf_dev->irq_gpio < 0) {
         pr_err("falied to get irq gpio!\n");
@@ -373,15 +322,7 @@ int gf_parse_dts(struct gf_dev* gf_dev)
         goto err_irq;
     }
     gpio_direction_input(gf_dev->irq_gpio);
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-    pr_err("end gf_parse_dts !\n");
-    gf_parse_notify_tpinfo_flag(gf_dev);
-    pr_err("end gf_parse_dts !\n");
-    return rc;
 
-err_irq:
-    devm_gpio_free(dev, gf_dev->reset_gpio);
-#else
     rc = gf_parse_pwr_list(gf_dev);
     if (rc) {
         pr_err("failed to parse power list, rc = %d\n", rc);
@@ -400,7 +341,6 @@ err_pwr:
 err_irq:
     devm_gpio_free(dev, gf_dev->reset_gpio);
 err_reset:
-#endif
     return rc;
 }
 
@@ -418,49 +358,13 @@ void gf_cleanup(struct gf_dev *gf_dev)
         pr_info("remove reset_gpio success\n");
     }
 
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-    pinctrl_select_state(pinctrl, pins_power_off);
-#else
     gf_cleanup_pwr_list(gf_dev);
-#endif
 }
 
 /*power on auto during boot, no need fp driver power on*/
 int gf_power_on(struct gf_dev* gf_dev)
 {
     int rc = 0;
-    struct device *dev = &gf_dev->spi->dev;
-    struct device_node *np = dev->of_node;
-
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-    rc = pinctrl_select_state(pinctrl, pins_power_on);
-    if (rc) {
-        dev_err(&gf_dev->spi->dev,
-            "%s: pinctrl_select_state failed\n", __func__);
-        msleep(30);
-        return rc;
-    }
-    msleep(30);
-
-    gf_dev->lpwr_gpio = of_get_named_gpio(np, "fp-gpio-lpwr", 0);
-    if (gf_dev->lpwr_gpio < 0) {
-        pr_err("falied to get lpwr gpio!\n");
-        return gf_dev->lpwr_gpio;
-    }
-
-    rc = devm_gpio_request(dev, gf_dev->lpwr_gpio, "goodix_lpwr");
-    if (rc) {
-        pr_err("failed to request lpwr gpio, rc = %d\n", rc);
-        devm_gpio_free(dev, gf_dev->reset_gpio);
-    }
-    gpio_direction_output(gf_dev->lpwr_gpio, 0);
-
-    /*rc = pinctrl_select_state(pinctrl,pins_1P8_power_on);
-    if (rc) {
-        dev_err(&gf_dev->spi->dev,
-            "%s: pinctrl_select_state failed\n", __func__);
-    }*/
-#else
     unsigned index = 0;
 
     for (index = 0; index < gf_dev->power_num; index++) {
@@ -492,7 +396,6 @@ int gf_power_on(struct gf_dev* gf_dev)
         }
         msleep(gf_dev->pwr_list[index].delay);
     }
-#endif
 
     msleep(30);
     return rc;
@@ -502,14 +405,6 @@ int gf_power_on(struct gf_dev* gf_dev)
 int gf_power_off(struct gf_dev* gf_dev)
 {
     int rc = 0;
-
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-    rc = pinctrl_select_state(pinctrl, pins_power_off);
-    if (rc) {
-        dev_err(&gf_dev->spi->dev,
-            "%s: pinctrl_select_state failed\n", __func__);
-    }
-#else
     unsigned index = 0;
 
     for (index = 0; index < gf_dev->power_num; index++) {
@@ -540,7 +435,6 @@ int gf_power_off(struct gf_dev* gf_dev)
                     gf_dev->pwr_list[index].pwr_type, index);
         }
     }
-#endif
 
     msleep(30);
     return rc;
@@ -554,31 +448,25 @@ int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms)
         return -1;
     }
     //gpio_direction_output(gf_dev->reset_gpio, 1);
-#ifdef GF_FORCE_PINCTRL_RST_POWER
-    pinctrl_select_state(pinctrl, pins_reset_off);
-    mdelay(5);
-    pinctrl_select_state(pinctrl, pins_reset_on);
-#else
     gpio_set_value(gf_dev->reset_gpio, 0);
     mdelay(5);
     gpio_set_value(gf_dev->reset_gpio, 1);
-#endif
     mdelay(delay_ms);
     return 0;
 }
 int gf_power_reset(struct gf_dev *gf_dev)
 {
-       if(gf_dev == NULL) {
-            pr_info("Input buff is NULL.\n");
-            return -1;
-       }
-       gpio_set_value(gf_dev->reset_gpio, 0);
-       gf_power_off(gf_dev);
-       mdelay(50);
-       gf_power_on(gf_dev);
-       gpio_set_value(gf_dev->reset_gpio, 1);
-       mdelay(3);
-       return 0;
+    if (gf_dev == NULL) {
+        pr_info("Input buff is NULL.\n");
+        return -1;
+    }
+    gpio_set_value(gf_dev->reset_gpio, 0);
+    gf_power_off(gf_dev);
+    mdelay(50);
+    gf_power_on(gf_dev);
+    gpio_set_value(gf_dev->reset_gpio, 1);
+    mdelay(3);
+    return 0;
 }
 int gf_irq_num(struct gf_dev *gf_dev)
 {

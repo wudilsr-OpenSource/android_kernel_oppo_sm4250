@@ -40,8 +40,8 @@ static inline void hdd_register_hostapd_wext(struct net_device *dev)
 
 #ifdef VENDOR_EDIT
 //Add for: hotspot manager
-int oppo_wlan_hdd_modify_acl(struct net_device *dev, char* extra);
-int oppo_wlan_hdd_set_max_assoc(struct net_device *dev, char* extra);
+int oplus_wlan_hdd_modify_acl(struct net_device *dev, char* extra);
+int oplus_wlan_hdd_set_max_assoc(struct net_device *dev, char* extra);
 #endif /* VENDOR_EDIT */
 
 #endif /* end #ifndef WLAN_HDD_HOSTAPD_H */

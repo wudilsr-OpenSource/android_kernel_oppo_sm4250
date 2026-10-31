@@ -111,7 +111,7 @@ static int32_t cam_cci_validate_queue(struct cci_device *cci_dev,
 		uint32_t report_val = CCI_I2C_REPORT_CMD | (1 << 8) |
 			(1 << 9) | (report_id << 4);
 		CAM_DBG(CAM_CCI, "CCI_I2C_REPORT_CMD report_id%d cci%dm%dq%d",
-			report_id, cci_dev->soc_info.index, master, queue); 
+			report_id, cci_dev->soc_info.index, master, queue);
 
 		cam_io_w_mb(report_val,
 			base + CCI_I2C_M0_Q0_LOAD_DATA_ADDR +
@@ -134,7 +134,7 @@ static int32_t cam_cci_validate_queue(struct cci_device *cci_dev,
 			queue*0x100 + 3 * 4;
 		readreg_val = cam_io_r_mb(base + reg_offset);
 		CAM_DBG(CAM_CCI, "reg_offset 0x%x 0x%x cci%dm%dq%d",
-			reg_offset, readreg_val, cci_dev->soc_info.index, master, queue); 
+			reg_offset, readreg_val, cci_dev->soc_info.index, master, queue);
 		reg_val = 1 << ((master * 2) + queue);
 
 		CAM_DBG(CAM_CCI, "CCI_QUEUE_START_ADDR cci%dm%dq%d",
@@ -384,7 +384,7 @@ static void cam_cci_load_report_cmd(struct cci_device *cci_dev,
 	uint32_t read_val = cam_io_r_mb(base +
 		CCI_I2C_M0_Q0_CUR_WORD_CNT_ADDR + reg_offset);
 	uint32_t report_id =
-		cci_dev->cci_i2c_queue_info[master][queue].report_id; 
+		cci_dev->cci_i2c_queue_info[master][queue].report_id;
 
 	uint32_t report_val = CCI_I2C_REPORT_CMD | (1 << 8) |
 		(1 << 9) | (report_id << 4);
@@ -398,9 +398,9 @@ static void cam_cci_load_report_cmd(struct cci_device *cci_dev,
 
 	cci_dev->cci_i2c_queue_info[master][queue].report_id++;
 	if (cci_dev->cci_i2c_queue_info[master][queue].report_id == REPORT_IDSIZE)
-		cci_dev->cci_i2c_queue_info[master][queue].report_id = 0; 
+		cci_dev->cci_i2c_queue_info[master][queue].report_id = 0;
 
-	CAM_DBG(CAM_CCI, "CCI_I2C_M0_Q0_EXEC_WORD_CNT_ADDR %d cci%dm%dq%d", 
+	CAM_DBG(CAM_CCI, "CCI_I2C_M0_Q0_EXEC_WORD_CNT_ADDR %d cci%dm%dq%d",
 		read_val, cci_dev->soc_info.index, master, queue);
 	cam_io_w_mb(read_val, base +
 		CCI_I2C_M0_Q0_EXEC_WORD_CNT_ADDR + reg_offset);
@@ -414,8 +414,8 @@ static int32_t cam_cci_wait_report_cmd(struct cci_device *cci_dev,
 	struct cam_hw_soc_info *soc_info =
 		&cci_dev->soc_info;
 	void __iomem *base = soc_info->reg_map[0].mem_base;
-	uint32_t reg_offset = 0; 
-	uint32_t readreg_val = 0; 
+	uint32_t reg_offset = 0;
+	uint32_t readreg_val = 0;
 
 
 	uint32_t reg_val = 1 << ((master * 2) + queue);
@@ -425,12 +425,12 @@ static int32_t cam_cci_wait_report_cmd(struct cci_device *cci_dev,
 		queue*0x100;
 	readreg_val = cam_io_r_mb(base + reg_offset);
 	CAM_DBG(CAM_CCI, "reg_offset 0x%x 0x%x cci%dm%dq%d",
-	reg_offset, readreg_val, cci_dev->soc_info.index, master, queue); 
-	reg_offset = DEBUG_MASTER_QUEUE_REG_START +  master*0x200 + 
+	reg_offset, readreg_val, cci_dev->soc_info.index, master, queue);
+	reg_offset = DEBUG_MASTER_QUEUE_REG_START +  master*0x200 +
 		queue*0x100 + 3 * 4;
 	readreg_val = cam_io_r_mb(base + reg_offset);
 	CAM_DBG(CAM_CCI, "reg_offset 0x%x 0x%x cci%dm%dq%d",
-		reg_offset, readreg_val, cci_dev->soc_info.index, master, queue); 
+		reg_offset, readreg_val, cci_dev->soc_info.index, master, queue);
 
 	spin_lock_irqsave(
 		&cci_dev->cci_master_info[master].lock_q[queue], flags);

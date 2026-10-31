@@ -57,7 +57,8 @@
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #include <linux/timekeeping.h>
 #endif
-#include <soc/oplus/system/oppo_project.h>
+
+#include <soc/oplus/system/oplus_project.h>
 
 #define SEQ_printf(m, x...)     \
     do {                        \
@@ -67,11 +68,14 @@
             pr_debug(x);        \
     } while (0)
 
-#define OPPO_SHUTDOWN_LOG_START_BLOCK_EMMC  10240
-#define OPPO_SHUTDOWN_LOG_START_BLOCK_UFS   1280
-#define OPPO_SHUTDOWN_KERNEL_LOG_SIZE_BYTES 1024 * 1024
-#define OPPO_SHUTDOWN_FLAG_OFFSET           0 * 1024 * 1024
-#define OPPO_SHUTDOWN_KMSG_OFFSET           61 * 1024 * 1024
+#define OPLUS_SHUTDOWN_LOG_START_BLOCK_EMMC  10240
+#define OPLUS_SHUTDOWN_LOG_START_BLOCK_UFS   1280
+#define OPLUS_SHUTDOWN_KERNEL_LOG_SIZE_BYTES 1024 * 1024
+#define OPLUS_SHUTDOWN_FLAG_OFFSET           0 * 1024 * 1024
+/* #ifdef OPLUS_CUSTOM_OP_DEF */
+#define DERIVED_SHUTDOWN_KMSG_OFFSET  11 * 1024 * 1024
+/* #endif */
+#define OPLUS_SHUTDOWN_KMSG_OFFSET           61 * 1024 * 1024
 #define FILE_MODE_0666                      0666
 
 #define BLOCK_SIZE_EMMC                     512
@@ -83,8 +87,11 @@
 
 #define TASK_INIT_COMM                      "init"
 
-#define OPPO_PARTITION_OPPORESERVE3_LINK    "/dev/block/by-name/opporeserve3"
-#define OPPO_PARTITION_OPLUSRESERVE3_LINK    "/dev/block/by-name/oplusreserve3"
+#define LEGACY_PARTITION_OPLUSRESERVE3_LINK    "/dev/block/by-name/opporeserve3"
+/* #ifdef OPLUS_CUSTOM_OP_DEF */
+#define DERIVED_PARTITION_OPLUSRESERVE3_LINK    "/dev/block/by-name/reserve3"
+/* #endif */
+#define OPLUS_PARTITION_OPLUSRESERVE3_LINK    "/dev/block/by-name/oplusreserve3"
 
 #define ST_LOG_NATIVE_HELPER                "/system/bin/phoenix_log_native_helper.sh"
 
@@ -103,9 +110,9 @@
 #define SHUTDOWN_STAGE_INIT_POFF            70
 #define SHUTDOWN_RUS_MIN                    255
 #define SHUTDOWN_TOTAL_TIME_MIN             60
-#define SHUTDOWN_DEFAULT_NATIVE_TIME        60
-#define SHUTDOWN_DEFAULT_JAVA_TIME          60
-#define SHUTDOWN_DEFAULT_TOTAL_TIME         150
+#define SHUTDOWN_DEFAULT_NATIVE_TIME        15
+#define SHUTDOWN_DEFAULT_JAVA_TIME          15
+#define SHUTDOWN_DEFAULT_TOTAL_TIME         90
 #define SHUTDOWN_INCREASE_TIME              5
 
 #define KE_LOG_COLLECT_TIMEOUT              msecs_to_jiffies(10000)
@@ -159,11 +166,11 @@ extern void shutdown_dump_android_log(void);
 
 static struct timespec current_boottime_time(void)
 {
-    struct timespec ts;
+	struct timespec ts;
 
-    getboottime(&ts);
+	getboottime(&ts);
 
-    return ts;
+	return ts;
 }
 
 static ssize_t shutdown_detect_trigger(struct file *filp, const char *ubuf, size_t cnt, loff_t *data)
@@ -247,7 +254,7 @@ static ssize_t shutdown_detect_trigger(struct file *filp, const char *ubuf, size
     case SHUTDOWN_STAGE_INIT:
         if (!shutdown_detect_started) {
             shutdown_detect_started = true;
-            shutdown_init_start_time = current_boottime_time().tv_sec;
+			shutdown_init_start_time = current_boottime_time().tv_sec;
             shutdown_start_time = shutdown_init_start_time;
             shd_complete_monitor = kthread_run(shutdown_detect_func, NULL, "shutdown_detect_thread");
             if (IS_ERR(shd_complete_monitor)) {
@@ -256,7 +263,7 @@ static ssize_t shutdown_detect_trigger(struct file *filp, const char *ubuf, size
             }
 
         } else {
-            shutdown_init_start_time = current_boottime_time().tv_sec;
+			shutdown_init_start_time = current_boottime_time().tv_sec;
 
             if((shutdown_init_start_time - shutdown_systemserver_start_time) > gjavatimeout) {
                 pr_err("shutdown_detect_timeout: timeout happened in system_server stage\n");
@@ -384,42 +391,53 @@ shd_fail:
 
 int shutdown_kernel_log_save(void *args)
 {
-    if(0 != dump_kmsg(OPPO_PARTITION_OPPORESERVE3_LINK, OPPO_SHUTDOWN_KMSG_OFFSET, &shutdown_kmsg_dumper))
-    {
-        pr_err("dump kmsg to OPPO_PARTITION_OPPORESERVE3_LINK failed\n");
-        if (0 != dump_kmsg(OPPO_PARTITION_OPLUSRESERVE3_LINK, OPPO_SHUTDOWN_KMSG_OFFSET, &shutdown_kmsg_dumper)) {
-		pr_err("dump kmsg to OPPO_PARTITION_OPLUSRESERVE3_LINK failed\n");
-		complete(&shd_comp);
-		return -1;
-        }
-    }
-    complete(&shd_comp);
-    return 1;
+	if (0 != dump_kmsg(LEGACY_PARTITION_OPLUSRESERVE3_LINK, OPLUS_SHUTDOWN_KMSG_OFFSET, &shutdown_kmsg_dumper)) {
+		pr_err("dump kmsg to LEGACY_PARTITION_OPLUSRESERVE3_LINK failed\n");
+		if (0 != dump_kmsg(OPLUS_PARTITION_OPLUSRESERVE3_LINK, OPLUS_SHUTDOWN_KMSG_OFFSET, &shutdown_kmsg_dumper)) {
+			pr_err("dump kmsg to OPLUS_PARTITION_OPLUSRESERVE3_LINK failed\n");
+/* #ifdef OPLUS_CUSTOM_OP_DEF */
+			if (0 != dump_kmsg(DERIVED_PARTITION_OPLUSRESERVE3_LINK, DERIVED_SHUTDOWN_KMSG_OFFSET, &shutdown_kmsg_dumper)) {
+				pr_err("dump kmsg to DERIVED_PARTITION_OPLUSRESERVE3_LINK failed\n");
+				complete(&shd_comp);
+				return -1;
+			}
+/* #endif */
+		}
+	}
+	complete(&shd_comp);
+	return 1;
 }
 
 static int shutdown_timeout_flag_write_now(void *args)
 {
-    struct file *opfile;
-    ssize_t size;
-    loff_t offsize;
-    char data_info[SIZEOF_STRUCT_SHD_INFO] = {'\0'};
-    int rc;
-    struct shd_info shutdown_flag;
+	struct file *opfile;
+	ssize_t size;
+	loff_t offsize;
+	char data_info[SIZEOF_STRUCT_SHD_INFO] = {'\0'};
+	int rc;
+	struct shd_info shutdown_flag;
 
-    opfile = filp_open(OPPO_PARTITION_OPPORESERVE3_LINK, O_RDWR, 0600);
+	opfile = filp_open(LEGACY_PARTITION_OPLUSRESERVE3_LINK, O_RDWR, 0600);
 
-    if (IS_ERR(opfile)) {
-        pr_err("open OPPO_PARTITION_OPPORESERVE3_LINK error: %ld\n",PTR_ERR(opfile));
+	if (IS_ERR(opfile)) {
+		pr_err("open LEGACY_PARTITION_OPLUSRESERVE3_LINK error: %ld\n", PTR_ERR(opfile));
 
-        opfile = filp_open(OPPO_PARTITION_OPLUSRESERVE3_LINK, O_RDWR, 0600);
-        if (IS_ERR(opfile)) {
-		pr_err("open OPPO_PARTITION_OPLUSRESERVE3_LINK error: %ld\n", PTR_ERR(opfile));
-		complete(&shd_comp);
-		return -1;
-        }
-    }
+		opfile = filp_open(OPLUS_PARTITION_OPLUSRESERVE3_LINK, O_RDWR, 0600);
+		if (IS_ERR(opfile)) {
+			pr_err("open OPLUS_PARTITION_OPLUSRESERVE3_LINK error: %ld\n", PTR_ERR(opfile));
 
-    offsize = OPPO_SHUTDOWN_FLAG_OFFSET;
+/* #ifdef OPLUS_CUSTOM_OP_DEF */
+			opfile = filp_open(DERIVED_PARTITION_OPLUSRESERVE3_LINK, O_RDWR, 0600);
+			if (IS_ERR(opfile)) {
+				pr_err("open DERIVED_PARTITION_OPLUSRESERVE3_LINK error: %ld\n", PTR_ERR(opfile));
+				complete(&shd_comp);
+				return -1;
+			}
+/* #endif */
+		}
+	}
+
+    offsize = OPLUS_SHUTDOWN_FLAG_OFFSET;
 
     strncpy(shutdown_flag.magic, "ShutDown", SHUTDOWN_MAGIC_LEN);
     if(gtimeout) {
@@ -513,7 +531,7 @@ static void shutdown_timeout_flag_write(int timeout)
 
     gtimeout = timeout;
 
-    shutdown_end_time = current_boottime_time().tv_sec;
+	shutdown_end_time = current_boottime_time().tv_sec;
 
     tsk = kthread_run(shutdown_timeout_flag_write_now, NULL, "shd_to_flag");
     if(IS_ERR(tsk))
@@ -546,19 +564,18 @@ static int shutdown_detect_func(void *dummy)
 
     shutdown_timeout_flag_write(1);// timeout happened
 
-    pr_err("shutdown_detect:%s shutdown_detect status:%u. \n", __func__, shutdown_phase);
     if (OEM_RELEASE == get_eng_version()) {
         if(is_shutdows){
-            pr_err("shutdown_detect: shutdown or reboot? shutdown status:%u \n",shutdown_phase);
+            pr_err("shutdown_detect: shutdown or reboot? shutdown\n");
             if(shutdown_task) {
                 wake_up_process(shutdown_task);
             }
         }else{
-            pr_err("shutdown_detect: shutdown or reboot? reboot shutdown status:%u \n",shutdown_phase);
+            pr_err("shutdown_detect: shutdown or reboot? reboot\n");
             BUG();
         }
     } else {
-        pr_err("shutdown_detect_error, keep origin follow in !release build, but you can still get log in opporeserve3 shutdown status:%u \n",shutdown_phase);
+        pr_err("shutdown_detect_error, keep origin follow in !release build, but you can still get log in oplusreserve3\n");
     }
     return 0;
 }

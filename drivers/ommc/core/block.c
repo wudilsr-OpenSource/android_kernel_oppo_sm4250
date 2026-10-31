@@ -58,10 +58,6 @@
 #include "quirks.h"
 #include "sd_ops.h"
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-#include "../host/sdInfo/sdinfo.h"
-#endif
-
 MODULE_ALIAS("mmc:block");
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
@@ -2166,19 +2162,6 @@ static void mmc_blk_mq_req_done(struct mmc_request *mrq)
 	struct mmc_queue *mq = q->queuedata;
 	struct mmc_host *host = mq->card->host;
 	unsigned long flags;
-
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-	if (host->card && mmc_card_sd(host->card)) {
-		if ((mrq->cmd && (mrq->cmd->error == -ETIMEDOUT)) || (mrq->stop && (mrq->stop->error == -ETIMEDOUT)) || (mrq->sbc && (mrq->sbc->error == -ETIMEDOUT)))
-			sdinfo.cmd_timeout_count += 1;
-		else if ((mrq->cmd && (mrq->cmd->error == -EILSEQ)) || (mrq->stop && (mrq->stop->error == -EILSEQ)) || (mrq->sbc && (mrq->sbc->error == -EILSEQ)))
-			sdinfo.cmd_crc_err_count += 1;
-		else if (mrq->data && (mrq->data->error == -ETIMEDOUT))
-			sdinfo.data_timeout_int_count +=1;
-		else if (mrq->data && (mrq->data->error == -EILSEQ))
-			sdinfo.data_crc_err_count += 1;
-	}
-#endif
 
 	if (!mmc_host_done_complete(host)) {
 		bool waiting;

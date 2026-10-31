@@ -42,7 +42,7 @@
 		qcom,mdss-pan-physical-height-dimension = <151>;
 		oplus,mdss-dsi-vendor-name = "NT36525B-90HZ";
 		oplus,mdss-dsi-manufacture = "INX";
-		oplus,panel-cabc-soda;
+
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
 				qcom,mdss-dsi-video-mode;
@@ -115,10 +115,16 @@
 					39 01 00 00 14 00 02 28 00
 					39 01 00 00 78 00 02 10 00
 				];
-				qcom,mdss-dsi-cabc-low-mode-command = [
+				// cabc low mode
+				qcom,mdss-dsi-cabc-mode1-command = [
 					39 01 00 00 00 00 02 55 01
 				];
-				qcom,mdss-dsi-cabc-high-mode-command = [
+				// cabc high mode
+				qcom,mdss-dsi-cabc-mode2-command = [
+					39 01 00 00 00 00 02 55 02
+				];
+				// cabc high mode
+				qcom,mdss-dsi-cabc-mode3-command = [
 					39 01 00 00 00 00 02 55 02
 				];
 				qcom,mdss-dsi-cabc-off-command = [
@@ -127,8 +133,9 @@
 				qcom,mdss-dsi-post-on-backlight-state = "dsi_lp_mode";
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
-				qcom,mdss-dsi-cabc-low-mode-command-state = "dsi_hs_mode";
-				qcom,mdss-dsi-cabc-high-mode-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-cabc-mode1-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-cabc-mode2-command-state = "dsi_hs_mode";
+				qcom,mdss-dsi-cabc-mode3-command-state = "dsi_hs_mode";
 				qcom,mdss-dsi-cabc-off-command-state = "dsi_hs_mode";
 			};
 		};

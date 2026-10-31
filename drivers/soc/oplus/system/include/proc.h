@@ -1,5 +1,5 @@
 /************************************************************
- * Copyright 2017 OPPO Mobile Comm Corp., Ltd.
+ * Copyright 2017 OPLUS Mobile Comm Corp., Ltd.
  * All rights reserved.
  *
  * Description     : disable selinux denied log in MP version

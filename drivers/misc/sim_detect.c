@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #define SIM_DETECT_NAME "sim_detect"
 
@@ -73,12 +74,18 @@ static ssize_t proc_sim_detect_read(struct file *file,
 	return ret;
 }
 
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+static const struct proc_ops sim_detect_ops = {
+	.proc_read  = proc_sim_detect_read,
+	.proc_open  = simple_open,
+};
+#else
 static const struct file_operations sim_detect_ops = {
 	.read  = proc_sim_detect_read,
 	.open  = simple_open,
 	.owner = THIS_MODULE,
 };
+#endif
 
 static int sim_card_detect_init(struct sim_detect_data *sim_detect_data)
 {

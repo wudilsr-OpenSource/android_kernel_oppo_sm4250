@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ * oplus_kevent.h - for kevent action upload upload to user layer
+ *	author by pdl
  */
 #ifndef _OPLUS_MM_KEVENT_
 #define _OPLUS_MM_KEVENT_
@@ -20,11 +21,7 @@
 
 #define MAX_PAYLOAD_TAG 			 (128)
 #define MAX_PAYLOAD_EVENTID 		 (128)
-#define MAX_PAYLOAD_DATASIZE		 (1024)
-
-#ifndef OPLUS_NETLINK_MM_KEVENT
-#define OPLUS_NETLINK_MM_KEVENT      (41)
-#endif
+#define MAX_PAYLOAD_DATASIZE		 (512)
 
 #define MM_KEVENT_MODULE_SIZE_MAX	 (16)
 #define MM_KEVENT_MODULE_LEN_MAX	 (64)
@@ -62,11 +59,9 @@ struct mm_kevent_packet {
 #ifdef CONFIG_OPLUS_FEATURE_MM_FEEDBACK
 int mm_fb_kevent_send_to_user(struct mm_kevent_packet *userinfo);
 void mm_fb_kevent_set_recv_user(mm_kevent_recv_user_func recv_func);
-void mm_fb_kevent_receive(struct sk_buff *__skbbr);
 #else //CONFIG_OPLUS_FEATURE_MM_FEEDBACK
 int mm_fb_kevent_send_to_user(struct mm_kevent_packet *userinfo) {return 0;}
 void mm_fb_kevent_set_recv_user(mm_kevent_recv_user_func recv_func) {return;}
-void mm_fb_kevent_receive(struct sk_buff *__skbbr) {return;}
 #endif //CONFIG_OPLUS_FEATURE_MM_FEEDBACK
 #endif  //_OPLUS_MM_KEVENT_
 

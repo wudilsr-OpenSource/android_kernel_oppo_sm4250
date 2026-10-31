@@ -244,7 +244,7 @@ static inline int dump_mem_detail(enum mem_type type, bool verbose)
 #endif /* CONFIG_SLUB_DEBUG || CONFIG_SLUB_STAT_DEBUG */
 		break;
 	case MEM_ANON:
-		ret = dump_tasks_info(verbose);
+		ret = dump_tasks_info(1);
 		break;
 	case MEM_ION_USED:
 		ret = dump_ion(verbose);

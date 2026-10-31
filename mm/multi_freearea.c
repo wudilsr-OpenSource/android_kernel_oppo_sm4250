@@ -69,10 +69,7 @@
 #include <linux/math64.h>
 #include <linux/writeback.h>
 #include "internal.h"
-
 #include "multi_freearea.h"
-
-
 #include "internal.h"
 
 static unsigned int show_order = 0;

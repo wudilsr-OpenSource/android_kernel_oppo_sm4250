@@ -163,11 +163,11 @@ typedef struct sia81xx_dev_s {
 	struct sia81xx_err err_info;
 }sia81xx_dev_t;
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef CONFIG_SIA_PA_ALGO
 sia81xx_dev_t *g_sia81xx = NULL;
 #endif /*CONFIG_SIA_PA_ALGO*/
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 
 static ssize_t sia81xx_cmd_show(struct device* cd,
 	struct device_attribute *attr, char* buf);
@@ -1449,7 +1449,7 @@ static int sia81xx_algo_en_set(
 	return 0;
 }
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef OPPO_SIA_BOOST_VOL
 static int sia81xx_volme_boost_get(
 		struct snd_kcontrol *kcontrol,
@@ -1512,9 +1512,9 @@ static int sia81xx_volme_boost_set(
 		return 0;
 }
 #endif /* OPPO_SIA_BOOST_VOL */
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef CONFIG_SIA_PA_ALGO
 void sia81xx_start(){
 		sia81xx_resume(g_sia81xx);
@@ -1524,28 +1524,28 @@ void sia81xx_stop(){
 		sia81xx_suspend(g_sia81xx);
 }
 #endif /*CONFIG_SIA_PA_ALGO*/
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 
 static const char *const power_function[] = { "Off", "On" };
 static const char *const algo_enable[] = { "Off", "On" };
 static const char *const audio_scene[] = { "Playback", "Voice" };
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef OPPO_SIA_BOOST_VOL
 static const char *const volume_boost[] = { "Voltage8_5","Voltage7", "Voltage6_5","Voltage5" };
 #endif /* OPPO_SIA_BOOST_VOL */
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 static const struct soc_enum power_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(power_function), power_function);
 static const struct soc_enum algo_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(algo_enable), algo_enable);
 static const struct soc_enum audio_scene_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(audio_scene), audio_scene);
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef OPPO_SIA_BOOST_VOL
 static const struct soc_enum volume_boost_enum =
 		SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(volume_boost), volume_boost);
 #endif /* OPPO_SIA_BOOST_VOL */
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 static const struct snd_kcontrol_new sia81xx_controls[] = {
 	SOC_ENUM_EXT("Sia81xx Power", power_enum,
 			sia81xx_power_get, sia81xx_power_set),
@@ -1553,12 +1553,12 @@ static const struct snd_kcontrol_new sia81xx_controls[] = {
 			sia81xx_algo_en_get, sia81xx_algo_en_set),
 	SOC_ENUM_EXT("Sia81xx Audio Scene", audio_scene_enum,
 			sia81xx_audio_scene_get, sia81xx_audio_scene_set),
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef OPPO_SIA_BOOST_VOL
 		SOC_ENUM_EXT("Sia81xx Volme Boost", volume_boost_enum,
 						sia81xx_volme_boost_get, sia81xx_volme_boost_set)
 #endif /* OPPO_SIA_BOOST_VOL */
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 };
 
 static int sia81xx_spkr_pa_event(
@@ -1948,11 +1948,11 @@ static int sia81xx_i2c_probe(
 		return -ENODEV;
 	}
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef CONFIG_SIA_PA_ALGO
 		g_sia81xx = sia81xx;
 #endif /*CONFIG_SIA_PA_ALGO*/
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 
 	sia81xx->regmap = regmap;
 
@@ -1989,11 +1989,11 @@ static int sia81xx_i2c_remove(
 
 	put_sia81xx_dev(sia81xx);
 
-#ifdef VENDOR_EDIT
+#ifdef OPLUS_ARCH_EXTENDS
 #ifdef CONFIG_SIA_PA_ALGO
 		g_sia81xx = NULL;
 #endif /*CONFIG_SIA_PA_ALGO*/
-#endif /* VENDOR_EDIT */
+#endif /* OPLUS_ARCH_EXTENDS */
 
 	return ret;
 }

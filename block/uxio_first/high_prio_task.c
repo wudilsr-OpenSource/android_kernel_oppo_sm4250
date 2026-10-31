@@ -14,7 +14,7 @@
 #include "uxio_first_opt.h"
 
 #ifdef CONFIG_FG_TASK_UID
-extern bool is_fg(int uid);
+#include <linux/healthinfo/fg.h>
 #endif /*CONFIG_FG_TASK_UID*/
 
 #define SYSTEM_APP_UID 1000

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2023, The Linux Foundation. All rights reserved.
  */
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -1563,7 +1563,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 {
 	uint32_t *payload;
 	int port_idx, copp_idx, idx, client_id;
-	int num_modules;
+	uint32_t num_modules;
 	int ret;
 
 	if (data == NULL) {

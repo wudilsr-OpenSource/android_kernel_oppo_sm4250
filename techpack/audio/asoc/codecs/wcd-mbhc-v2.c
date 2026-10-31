@@ -26,8 +26,6 @@
 #include "wcd-mbhc-adc.h"
 #include <asoc/wcd-mbhc-v2-api.h>
 
-extern void switch_headset_state(int headset_state);
-
 void wcd_mbhc_jack_report(struct wcd_mbhc *mbhc,
 			  struct snd_soc_jack *jack, int status, int mask)
 {
@@ -792,10 +790,6 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		#endif /* OPLUS_ARCH_EXTENDS */
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
 	}
-
-/* BSP.TP.Init, 2021/02/24, Add for notify touchpanel status */
-  	switch_headset_state(insertion);
-
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
 }
 EXPORT_SYMBOL(wcd_mbhc_report_plug);

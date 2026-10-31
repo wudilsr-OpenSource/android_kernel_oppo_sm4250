@@ -33,6 +33,8 @@
 
 static bool boost_pool_enable = true;
 static void kcrit_scene_wakeup_lmkd(void);
+struct kmem_cache *boost_ion_info_cachep;
+bool create_kmemcache_ion_info_success = false;
 
 static inline unsigned int order_to_size(int order)
 {
@@ -231,9 +233,20 @@ struct page_info *boost_pool_allocate(struct ion_boost_pool *pool,
 		return NULL;
 	}
 
-	info = kmalloc(sizeof(*info), GFP_KERNEL);
-	if (!info)
-		return NULL;
+	if (likely(create_kmemcache_ion_info_success)) {
+		info = kmem_cache_zalloc(boost_ion_info_cachep, GFP_ATOMIC);
+		if (!info)
+			info = kmem_cache_zalloc(boost_ion_info_cachep, GFP_KERNEL);
+		if (unlikely(!info))
+			return ERR_PTR(-ENOMEM);
+		info->from_boost_kmem_cache = true;
+	} else {
+		info = kmalloc(sizeof(*info), GFP_KERNEL);
+		if (!info)
+			return NULL;
+		info->from_boost_kmem_cache = false;
+	}
+
 	for (i = 0; i < NUM_ORDERS; i++) {
 		if (size < order_to_size(orders[i]))
 			continue;
@@ -556,19 +569,6 @@ static int set_tsk_affinity(struct task_struct *tsk, int end_cpu)
 	return ret;
 }
 
-static int set_tsk_scheduler(struct task_struct *tsk, bool fifo)
-{
-	struct sched_param param = { .sched_priority = 0 };
-	int policy = SCHED_NORMAL;
-
-	if (fifo) {
-		policy = SCHED_FIFO;
-		param.sched_priority = 1;
-	}
-
-	return sched_setscheduler_nocheck(tsk, policy, &param);
-}
-
 struct ion_boost_pool *boost_pool_create(struct ion_system_heap *heap,
 					 unsigned int ion_flag,
 					 unsigned int nr_pages,
@@ -595,7 +595,7 @@ struct ion_boost_pool *boost_pool_create(struct ion_system_heap *heap,
 	}
 
 	if (ion_system_heap_create_pools(heap, boost_pool->pools,
-					 false, boost_flag))
+				 !!ion_flag, boost_flag))
 		goto free_heap;
 
 	boost_pool->origin = boost_pool->high = boost_pool->low = nr_pages;
@@ -664,9 +664,6 @@ struct ion_boost_pool *boost_pool_create(struct ion_system_heap *heap,
 	boost_pool->prefill_tsk = tsk;
 	set_tsk_affinity(tsk, 4);
 
-	if (false)
-		set_tsk_scheduler(tsk, true);
-
 	boost_pool_wakeup_process(boost_pool);
 	return boost_pool;
 
@@ -730,3 +727,5 @@ static void kcrit_scene_wakeup_lmkd(void)
 	wake_up_interruptible(&kcrit_scene_wait);
 }
 module_param_named(debug_boost_pool_enable, boost_pool_enable, bool, 0644);
+
+

@@ -891,7 +891,7 @@ static void scsi_dispatch_cmd_error(void *ignore, struct scsi_cmnd *cmd,
 	return;
 }
 
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 extern bool test_task_ux(struct task_struct *task);
 #endif
 static void sched_stat_iowait(void *ignore, struct task_struct *tsk, u64 delay)
@@ -900,7 +900,7 @@ static void sched_stat_iowait(void *ignore, struct task_struct *tsk, u64 delay)
 		return;
 
 	if (io_trace_this->enable) {
-#ifdef OPLUS_FEATURE_UIFIRST
+#ifdef OPLUS_FEATURE_SCHED_ASSIST
 		if (test_task_ux(tsk)
 		    && io_ns_to_ms(delay) >= UX_IO_WAIT_TIMEOUT)
 			io_trace_global_log(SCHED_STAT_IOWAIT_TAG, 0, 0, 0, 0,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2019-2020 Oplus. All rights reserved.
+ * Copyright (C) 2019-2021 Oplus. All rights reserved.
  */
 
 #define pr_fmt(fmt) "%s:%s " fmt, KBUILD_MODNAME, __func__
@@ -19,6 +19,7 @@
 #include <linux/idr.h>
 #include <linux/spinlock.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
 
 enum {
 	SHELL_FRONT = 0,
@@ -36,7 +37,7 @@ struct horae_shell_temp {
 	int shell_id;
 };
 
-static struct of_device_id horae_shell_of_match[] = {
+static const struct of_device_id horae_shell_of_match[] = {
 	{ .compatible = "oplus,shell-temp" },
 	{},
 };
@@ -191,16 +192,25 @@ static int proc_shell_show(struct seq_file *m, void *v)
 
 static int proc_shell_open(struct inode *inode, struct file *file)
 {
-
 	return single_open(file, proc_shell_show, NULL);
 }
 
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+static const struct proc_ops proc_shell_fops = {
+	.proc_open = proc_shell_open,
+	.proc_write = proc_shell_write,
+	.proc_read = seq_read,
+	.proc_release = single_release,
+};
+#else
 static const struct file_operations proc_shell_fops = {
 	.open = proc_shell_open,
 	.write = proc_shell_write,
 	.read = seq_read,
 	.release = single_release,
 };
+#endif
 
 static int __init horae_shell_init(void)
 {

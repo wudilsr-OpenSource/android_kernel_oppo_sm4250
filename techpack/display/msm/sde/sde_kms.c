@@ -1269,7 +1269,7 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 			sde_encoder_virt_reset(encoder);
 	}
 
-	SDE_ATRACE_END("sde_ksm_wait_for_commit_done");
+	SDE_ATRACE_END("sde_kms_wait_for_commit_done");
 }
 
 static void sde_kms_prepare_fence(struct msm_kms *kms,
@@ -2371,6 +2371,11 @@ static int sde_kms_atomic_check(struct msm_kms *kms,
 
 	sde_kms = to_sde_kms(kms);
 	dev = sde_kms->dev;
+
+	if (!dev) {
+		SDE_ERROR("invalid device\n");
+		return -EINVAL;
+	}
 
 	SDE_ATRACE_BEGIN("atomic_check");
 	if (sde_kms_is_suspend_blocked(dev)) {

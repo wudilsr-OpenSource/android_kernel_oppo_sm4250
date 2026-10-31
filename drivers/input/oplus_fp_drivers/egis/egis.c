@@ -31,7 +31,7 @@
 #include <linux/pm_wakeup.h>
 #include <linux/jiffies.h>
 #include <linux/version.h>
-#include "../include/oppo_fp_common.h"
+#include "../include/oplus_fp_common.h"
 
 //#include <mt_spi_hal.h>
 //#include <mt_spi.h>
@@ -242,9 +242,9 @@ int Interrupt_Init(struct egistec_data *egistec,int int_mode,int detect_period,i
 	int err = 0;
 	int status = 0;
     struct device_node *node = NULL;
-	struct irq_desc *desc = NULL;
-	struct irq_desc *desc1 = NULL;
-	
+    struct irq_desc *desc = NULL;
+    struct irq_desc *desc1 = NULL;
+
 DEBUG_PRINT("FP --  %s mode = %d period = %d threshold = %d\n",__func__,int_mode,detect_period,detect_threshold);
 DEBUG_PRINT("FP --  %s request_irq_done = %d gpio_irq = %d  pin = %d  \n",__func__,request_irq_done,gpio_irq, egistec->irqPin);
 
@@ -279,15 +279,15 @@ DEBUG_PRINT("FP --  %s request_irq_done = %d gpio_irq = %d  pin = %d  \n",__func
 			
 		if (int_mode == EDGE_TRIGGER_RISING){
 		DEBUG_PRINT("%s EDGE_TRIGGER_RISING\n", __func__);
-		err = request_irq(gpio_irq, fp_eint_func_ll,IRQ_TYPE_EDGE_RISING,"fp_detect-eint", egistec);
-			if (err){
+        err = request_irq(gpio_irq, fp_eint_func_ll, IRQ_TYPE_EDGE_RISING, "fp_detect-eint", egistec);
+        if (err) {
 				pr_err("request_irq failed==========%s,%d\n", __func__,__LINE__);
 				}				
 		}
 		else if (int_mode == EDGE_TRIGGER_FALLING){
 			DEBUG_PRINT("%s EDGE_TRIGGER_FALLING\n", __func__);
-			err = request_irq(gpio_irq, fp_eint_func_ll,IRQ_TYPE_EDGE_FALLING,"fp_detect-eint", egistec);
-			if (err){
+            err = request_irq(gpio_irq, fp_eint_func_ll, IRQ_TYPE_EDGE_FALLING, "fp_detect-eint", egistec);
+            if (err) {
 				pr_err("request_irq failed==========%s,%d\n", __func__,__LINE__);
 				}	
 		}
@@ -311,7 +311,7 @@ DEBUG_PRINT("FP --  %s request_irq_done = %d gpio_irq = %d  pin = %d  \n",__func
 		fps_ints.drdy_irq_flag = DRDY_IRQ_ENABLE;
 		enable_irq_wake(gpio_irq);
 
-		desc1 = irq_to_desc(gpio_irq);
+desc1 = irq_to_desc(gpio_irq);
 		DEBUG_PRINT("huzhonghua:****depth state =  %d\n", desc1->depth);
 		request_irq_done = 1;
 	}
@@ -321,8 +321,8 @@ DEBUG_PRINT("FP --  %s request_irq_done = %d gpio_irq = %d  pin = %d  \n",__func
 		fps_ints.drdy_irq_flag = DRDY_IRQ_ENABLE;
 		enable_irq_wake(gpio_irq);
 		enable_irq(gpio_irq);
-		desc = irq_to_desc(gpio_irq);
-		DEBUG_PRINT("huzhonghua:****depth  = %d\n", desc->depth);
+        desc = irq_to_desc(gpio_irq);
+        DEBUG_PRINT("huzhonghua:****depth  = %d\n", desc->depth);
 	}
 done:
 	return 0;
@@ -622,9 +622,8 @@ int egistec_platformFree(struct egistec_data *egistec)
 int egistec_platformInit(struct egistec_data *egistec)
 {
 	int status = 0;
-	struct platform_device *pdev = egistec->pd;
-
-	DEBUG_PRINT("%s\n", __func__);
+    struct platform_device *pdev = egistec->pd;
+    DEBUG_PRINT("%s\n", __func__);
 
 	if (egistec != NULL) {
 
@@ -691,46 +690,40 @@ int egistec_platformInit(struct egistec_data *egistec)
 //			goto egistec_platformInit_gpio_init_failed;
 		}
 */
+        if (g_egis_pmic_disable == 1) {
+        finger_regulator = devm_regulator_get(&pdev->dev, "vmch");
+            if (IS_ERR(finger_regulator)) {
+                printk(KERN_ERR "%s, get regulator err %ld!\n", __func__, PTR_ERR(finger_regulator));
+                status = -1;
+                goto err;
+                }
 
-		if (g_egis_pmic_disable == 1) {
-			finger_regulator = devm_regulator_get(&pdev->dev, "vmch");
-			if (IS_ERR(finger_regulator)){
-				printk(KERN_ERR "%s, get regulator err %ld!\n", __func__,PTR_ERR(finger_regulator));
-				status = -1;
-				goto err;
-			}
+            status = regulator_set_voltage(finger_regulator, 3300000, 3300000);
+            printk(KERN_ERR "%s, szl regulator err %d!\n", __func__, status);
+            status = regulator_enable(finger_regulator);
+            printk(KERN_ERR "%s, szl le regulator err %d!\n", __func__, status);
+            }
 
-			status = regulator_set_voltage(finger_regulator, 3300000, 3300000);
-			printk(KERN_ERR "%s, szl regulator err %d!\n", __func__,status);
-			status = regulator_enable(finger_regulator);
-			printk(KERN_ERR "%s, szl le regulator err %d!\n", __func__,status);
-		}
-
-//		pmic_register_interrupt_callback(INT_VMCH_OC,vmch_power_off);
-
-		else {
-			status = pinctrl_select_state(egistec->pinctrl_gpios, egistec->pins_power_high);
-			mdelay(2);
-			if (!status) {
-				DEBUG_PRINT("%s successful to select power active state\n", __func__);
-			} else {
-				DEBUG_PRINT("%s Failed to select power active state=%d\n", __func__, status);
-				goto err;
-			}
-		}
-//		pmic_enable_interrupt(INT_VMCH_OC, 1, "vmch");
-	}
+            else {
+            status = pinctrl_select_state(egistec->pinctrl_gpios, egistec->pins_power_high);
+            mdelay(2);
+            if (!status) {
+                DEBUG_PRINT("%s successful to select power active state\n", __func__);
+            } else {
+                DEBUG_PRINT("%s Failed to select power active state=%d\n", __func__, status);
+                goto err;
+            }
+        }
+}
 
 	egistec_platformInit_done = 1;
-
         mdelay(2);
-
         if (g_spi_cs_mode == 1) {
-                if (egistec->pins_spi_cs_mode) {
-                        pinctrl_select_state(egistec->pinctrl_gpios, egistec->pins_spi_cs_mode);
-                }
-                        pinctrl_select_state(egistec->pinctrl_gpios, egistec->pins_reset_high);
-        }
+            if (egistec->pins_spi_cs_mode) {
+                pinctrl_select_state(egistec->pinctrl_gpios, egistec->pins_spi_cs_mode);
+            }
+            pinctrl_select_state(egistec->pinctrl_gpios, egistec->pins_reset_high);
+    }
 
 	DEBUG_PRINT("%s successful status=%d\n", __func__, status);
 	return status;
@@ -754,7 +747,7 @@ static int egistec_parse_dt(struct device *dev,
 {
 //	struct device_node *np = dev->of_node;
 	int errorno = 0;
-	int rc = 0;
+    int rc = 0;
 
 #ifdef CONFIG_OF
 	int ret;
@@ -801,17 +794,17 @@ static int egistec_parse_dt(struct device *dev,
 			}
 
 */
-			rc = of_property_read_u32(node, "egis,pmic_disable", &g_egis_pmic_disable);
-			if (rc) {
-				dev_err(&pdev->dev, "failed to request egis,egis_pmic_disable, ret = %d\n", rc);
-				g_egis_pmic_disable = 0;
-			}
+            rc = of_property_read_u32(node, "egis,pmic_disable", &g_egis_pmic_disable);
+            if (rc) {
+                dev_err(&pdev->dev, "failed to request egis,egis_pmic_disable, ret = %d\n", rc);
+                g_egis_pmic_disable = 0;
+            }
 
-        rc = of_property_read_u32(node, "egis,spi_cs_mode", &g_spi_cs_mode);
-        if (rc) {
+            rc = of_property_read_u32(node, "egis,spi_cs_mode", &g_spi_cs_mode);
+            if (rc) {
                 dev_err(&pdev->dev, "failed to request egis,spi_cs_mode, ret = %d\n", rc);
                 g_spi_cs_mode = 0;
-        }
+            }
 
 			data->pins_reset_high = pinctrl_lookup_state(data->pinctrl_gpios, "rst-high");
 			if (IS_ERR(data->pins_reset_high)) {
@@ -826,20 +819,20 @@ static int egistec_parse_dt(struct device *dev,
 				goto pinctrl_err;
 			}
 
-			if (g_egis_pmic_disable != 1) {
-				data->pins_power_high= pinctrl_lookup_state(data->pinctrl_gpios, "power_high");
-				if (IS_ERR(data->pins_power_high)) {
-					ret = PTR_ERR(data->pins_power_high);
-					printk(KERN_ERR "%s can't find fingerprint pinctrl power_high\n", __func__);
-					goto pinctrl_err;
-				}
-				data->pins_power_low= pinctrl_lookup_state(data->pinctrl_gpios, "power_low");
-				if (IS_ERR(data->pins_power_low)) {
-					ret = PTR_ERR(data->pins_power_low);
-					printk(KERN_ERR "%s can't find fingerprint pinctrl power_low\n", __func__);
-					goto pinctrl_err;
-				}
-			}
+            if (g_egis_pmic_disable != 1) {
+                data->pins_power_high = pinctrl_lookup_state(data->pinctrl_gpios, "power_high");
+                if (IS_ERR(data->pins_power_high)) {
+                    ret = PTR_ERR(data->pins_power_high);
+                    printk(KERN_ERR "%s can't find fingerprint pinctrl power_high\n", __func__);
+                    goto pinctrl_err;
+                }
+                data->pins_power_low = pinctrl_lookup_state(data->pinctrl_gpios, "power_low");
+                if (IS_ERR(data->pins_power_low)) {
+                    ret = PTR_ERR(data->pins_power_low);
+                    printk(KERN_ERR "%s can't find fingerprint pinctrl power_low\n", __func__);
+                    goto pinctrl_err;
+                    }
+                }
 
 			printk(KERN_ERR "%s, get pinctrl success!!!!!\n", __func__);
 		} else {
@@ -993,10 +986,10 @@ static int egistec_remove(struct platform_device *pdev)
 	uinput_egis_destroy(egistec);
 	sysfs_egis_destroy(egistec);
 	#endif
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 14, 0)
-	wakeup_source_trash(&wakeup_source_fp);
+    #if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 14, 0)
+    wakeup_source_trash(&wakeup_source_fp);
 	del_timer_sync(&fps_ints.timer);
-#endif
+    #endif
 	request_irq_done = 0;
 	kfree(egistec);
     return 0;
@@ -1054,8 +1047,8 @@ static int egistec_probe(struct platform_device *pdev)
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 14, 0)
     wakeup_source_init(&wakeup_source_fp, "et580_wakeup");
 #else
-	wakeup_source_prepare(&wakeup_source_fp, "et580_wakeup");
-	wakeup_source_add(&wakeup_source_fp);
+    wakeup_source_prepare(&wakeup_source_fp, "et580_wakeup");
+    wakeup_source_add(&wakeup_source_fp);
 #endif
 	spin_lock_init(&egistec->spi_lock);
 	mutex_init(&egistec->buf_lock);
@@ -1187,14 +1180,13 @@ static int __init egis512_init(void)
 {
 	int status = 0;
 	int rc = 0;
+    if ((FP_EGIS_520 != get_fpsensor_type())) {
+        printk("%s, found not FP-egis sensor\n", __func__);
+        status = -EINVAL;
+        return status;
+        }
 
-	if ((FP_EGIS_520 != get_fpsensor_type())) {
-		printk("%s, found not FP-egis sensor\n", __func__);
-		status = -EINVAL;
-		return status;
-	}
-
-	printk("%s, Need to register egistec FP driver\n", __func__);
+    printk("%s, Need to register egistec FP driver\n", __func__);
 	printk(KERN_INFO "%s\n", __func__);
     status = platform_driver_register(&egistec_driver);	
 	if(status) {

@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2018-2020 Oplus. All rights reserved.
  */
+#define pr_fmt(fmt) "process_reclaim: " fmt
 
 #include <linux/init.h>
 #include <linux/ctype.h>
@@ -31,8 +32,11 @@ static inline int task_is_fg(struct task_struct *tsk)
 		return 1;
 	return 0;
 }
-/* 
- * check current need cancel reclaim or not, please check task not NULL first.
+
+extern int swapin_walk_pmd_entry(pmd_t *pmd, unsigned long start,
+		unsigned long end, struct mm_walk *walk);
+
+/* check current need cancel reclaim or not, please check task not NULL first.
  * If the reclaimed task has goto foreground, cancel reclaim immediately
  */
 #define RECLAIM_SCAN_REGION_LEN (400ul<<20)
@@ -42,12 +46,13 @@ enum reclaim_type {
 	RECLAIM_ANON,
 	RECLAIM_ALL,
 	RECLAIM_RANGE,
-	/* 
-	 * add three reclaim_type that only reclaim inactive pages 
+	/*
+	 * add three reclaim_type that only reclaim inactive pages
          */
 	RECLAIM_INACTIVE_FILE,
 	RECLAIM_INACTIVE_ANON,
 	RECLAIM_INACTIVE,
+	RECLAIM_SWAPIN,
 };
 
 static int mm_reclaim_pte_range(pmd_t *pmd, unsigned long addr,
@@ -74,7 +79,7 @@ cont:
 	isolated = 0;
 	pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
 	for (; addr != end; pte++, addr += PAGE_SIZE) {
-		/* 
+		/*
 		 * check whether the reclaim process should cancel
                  */
 		if (rp->reclaimed_task &&
@@ -90,8 +95,8 @@ cont:
 		if (!page)
 			continue;
 
-		/* 
-		 * do not reclaim page in active lru list 
+		/*
+		 * do not reclaim page in active lru list
 		 */
 		if (rp->inactive_lru && (PageActive(page) ||
 					PageUnevictable(page)))
@@ -115,7 +120,7 @@ cont:
 
 		list_add(&page->lru, &page_list);
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
-		/* 
+		/*
 		 * only qualcomm need inc isolate count; mtk do it itself.
 		 */
 		inc_node_page_state(page, NR_ISOLATED_ANON +
@@ -128,7 +133,7 @@ cont:
 	}
 	pte_unmap_unlock(pte - 1, ptl);
 
-	/* 
+	/*
 	 * check whether the reclaim process should cancel
          */
 	reclaimed = reclaim_pages_from_list(&page_list, vma, walk);
@@ -172,15 +177,14 @@ static noinline ssize_t reclaim_task_write(struct task_struct* task, char *buffe
 		type = RECLAIM_ANON;
 	else if (!strcmp(type_buf, "all"))
 		type = RECLAIM_ALL;
-	/* 
-	 * Check the input reclaim option is inactive
-	 */
 	else if (!strcmp(type_buf, "inactive"))
 		type = RECLAIM_INACTIVE;
 	else if (!strcmp(type_buf, "inactive_file"))
 		type = RECLAIM_INACTIVE_FILE;
 	else if (!strcmp(type_buf, "inactive_anon"))
 		type = RECLAIM_INACTIVE_ANON;
+	else if (!strcmp(type_buf, "swapin"))
+		type = RECLAIM_SWAPIN;
 	else if (isdigit(*type_buf))
 		type = RECLAIM_RANGE;
 	else
@@ -220,7 +224,7 @@ static noinline ssize_t reclaim_task_write(struct task_struct* task, char *buffe
 	if (!mm)
 		goto out;
 
-	/* 
+	/*
 	 * Flag that relcaim inactive pages only in mm_reclaim_pte_range
 	 */
 	if ((type == RECLAIM_INACTIVE) ||
@@ -257,6 +261,25 @@ cont:
 					min(vma->vm_end, end),
 					&reclaim_walk);
 			vma = vma->vm_next;
+		}
+	} else if (type == RECLAIM_SWAPIN) {
+		for (vma = mm->mmap; vma; vma = vma->vm_next) {
+			if (is_vm_hugetlb_page(vma))
+				continue;
+
+			if (!vma_is_anonymous(vma))
+				continue;
+
+			/* if mlocked, don't reclaim it */
+			if (vma->vm_flags & VM_LOCKED)
+				continue;
+
+			reclaim_walk.mm = mm;
+			reclaim_walk.pmd_entry = swapin_walk_pmd_entry;
+			reclaim_walk.private = vma;
+			walk_page_range(max(vma->vm_start, start),
+					min(vma->vm_end, end),
+					&reclaim_walk);
 		}
 	} else {
 		for (vma = mm->mmap; vma; vma = vma->vm_next) {
@@ -309,12 +332,20 @@ cont:
 	flush_tlb_mm(mm);
 	up_read(&mm->mmap_sem);
 
-	/* 
-	 *If not timeout and not reach the mmap end, continue
-	 */
-	if (((err == PR_PASS) || (err == -PR_ADDR_OVER) ||
-				(err == -PR_FULL)) && vma)
-		goto cont;
+	if (type != RECLAIM_SWAPIN) {
+		/*
+		 * If not reach the mmap end, continue
+		 * If timeout, reset the stop_jiffies after release mmap_sem.
+		 */
+		if (((err == -PR_TIME_OUT) || (err == PR_PASS) ||
+			(err == -PR_ADDR_OVER) || (err == -PR_FULL)) && vma) {
+			if (err == -PR_TIME_OUT)
+				current->reclaim.stop_jiffies =
+					jiffies + RECLAIM_TIMEOUT_JIFFIES;
+			goto cont;
+		}
+		task->reclaim.stop_scan_addr = 0;
+	}
 
 	current->flags &= ~PF_RECLAIM_SHRINK;
 	mmput(mm);
@@ -394,11 +425,11 @@ int is_reclaim_addr_over(struct mm_walk *walk, unsigned long addr)
 	return _is_reclaim_should_cancel(walk);
 }
 
-/* 
+/*
  * Create /proc/process_reclaim interface for process reclaim.
  * Because /proc/$pid/reclaim has deifferent permissiones of different processes,
  * and can not set to 0444 because that have security risk.
- * Use /proc/process_reclaim and setting with selinux 
+ * Use /proc/process_reclaim and setting with selinux
  */
 #ifdef CONFIG_PROC_FS
 #define PROCESS_RECLAIM_CMD_LEN 64
@@ -490,7 +521,7 @@ static ssize_t process_reclaim_enable_write(struct file *file,
 	int ret;
 
 	if (len > 11)
-		len = 11; 
+		len = 11;
 
 	if (copy_from_user(&kbuf, buff, len))
 		return -EFAULT;

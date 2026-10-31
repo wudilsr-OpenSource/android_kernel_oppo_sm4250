@@ -47,7 +47,7 @@
 #ifdef OPLUS_ARCH_EXTENDS
 #include <linux/proc_fs.h>
 
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 extern int get_boot_mode(void);
 
 struct tfa98xx *tfa98xx_whole_v6;
@@ -63,6 +63,9 @@ extern bool g_speaker_resistance_fail;
 #include <linux/fs.h>
 #endif /* OPLUS_ARCH_EXTENDS */
 
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+#include <soc/oplus/system/oplus_mm_kevent_fb.h>
+#endif
 
 /* Change volume selection behavior:
  * Uncomment following line to generate a profile change when updating
@@ -165,6 +168,8 @@ static enum Tfa98xx_Error tfa9874_calibrate(struct tfa98xx *tfa98xx, int *speake
 #ifdef OPLUS_FEATURE_TFA98XX_VI_FEEDBACK
 
 extern int send_tfa_cal_apr(void *buf, int cmd_size, bool bRead);
+int set_tfa_i2s(u32 tfa_i2s);
+static int (*extend_set_tfa_i2s)(u32 tfa_i2s);
 extern int send_tfa_cal_in_band(void *buf, int cmd_size);
 /*zhenyu.dong@MM.AUDIO.DRIVER.CODEC Add for distinguishing nxp smartpa */
 extern void set_smartpa_id(int id);
@@ -428,7 +433,7 @@ static const struct snd_kcontrol_new tfadsp_volume_controls[] = {
 static inline char *tfa_cont_profile_name(struct tfa98xx *tfa98xx, int prof_idx)
 {
 	if (tfa98xx->tfa->cnt == NULL)
-		return NULL;
+		return "NONE";
 	return tfaContProfileName_v6(tfa98xx->tfa->cnt, tfa98xx->tfa->dev_idx, prof_idx);
 }
 
@@ -452,8 +457,8 @@ static enum tfa_error tfa98xx_write_re25(struct tfa_device *tfa, int value)
 
 #ifdef OPLUS_ARCH_EXTENDS
 #ifdef CONFIG_DEBUG_FS
-static struct dentry *tfa98xx_debugfs;
-#endif
+static struct dentry *tfa98xx_debugfs = NULL;
+#endif /* CONFIG_DEBUG_FS */
 #define TFA98XX_DEBUG_FS_NAME "ftm_tfa98xx"
 int ftm_mode = 0;
 static char ftm_load_file[15] = "load_file_ok";
@@ -909,7 +914,7 @@ static void tfa98xx_inputdev_unregister(struct tfa98xx *tfa98xx)
 {
 	__tfa98xx_inputdev_check_register(tfa98xx, true);
 }
-
+#ifndef OPLUS_ARCH_EXTENDS
 /* OTC reporting
  * Returns the MTP0 OTC bit value
  */
@@ -958,6 +963,48 @@ static int tfa98xx_dbgfs_otc_set(void *data, u64 val)
 
 	return 0;
 }
+#else
+static ssize_t tfa98xx_dbgfs_otc_get(struct file *file,
+				     char __user *user_buf, size_t count,
+				     loff_t *ppos)
+{
+#ifdef CONFIG_DEBUG_FS
+		struct i2c_client *i2c = file->private_data;
+#else /*CONFIG_DEBUG_FS*/
+		struct i2c_client *i2c = PDE_DATA(file_inode(file));
+#endif/*CONFIG_DEBUG_FS*/
+	struct tfa98xx *tfa98xx = i2c_get_clientdata(i2c);
+	int value;
+	char *str = NULL;
+	int ret = 0;
+
+	str = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!str) {
+		ret = -ENOMEM;
+		pr_err("[0x%x] memory allocation failed\n", tfa98xx->i2c->addr);
+		goto r_c_err;
+	}
+	mutex_lock(&tfa98xx->dsp_lock);
+	value = tfa_dev_mtp_get(tfa98xx->tfa, TFA_MTP_OTC);
+	mutex_unlock(&tfa98xx->dsp_lock);
+
+	if (value < 0) {
+		pr_err("[0x%x] Unable to check DSP access: %d\n", tfa98xx->i2c->addr, value);
+		goto r_err;
+	}
+
+	ret = snprintf(str, PAGE_SIZE, "%d\n", value);
+	if (ret < 0)
+		goto r_err;
+	ret = simple_read_from_buffer(user_buf, count, ppos, str, ret);
+	pr_debug("[0x%x] OTC : %d\n", tfa98xx->i2c->addr, value);
+
+r_err:
+        kfree(str);
+r_c_err:
+        return ret;
+}
+#endif
 #ifndef OPLUS_ARCH_EXTENDS
 static int tfa98xx_dbgfs_mtpex_get(void *data, u64 *val)
 {
@@ -1053,6 +1100,7 @@ r_c_err:
 	return ret;
 }
 #endif
+#ifndef OPLUS_ARCH_EXTENDS
 static int tfa98xx_dbgfs_temp_get(void *data, u64 *val)
 {
 	struct i2c_client *i2c = (struct i2c_client *)data;
@@ -1080,7 +1128,47 @@ static int tfa98xx_dbgfs_temp_set(void *data, u64 val)
 
 	return 0;
 }
+#else
+static ssize_t tfa98xx_dbgfs_temp_get(struct file *file,
+				     char __user *user_buf,
+				     size_t count, loff_t *ppos)
+{
+#ifdef CONFIG_DEBUG_FS
+		struct i2c_client *i2c = file->private_data;
+#else /*CONFIG_DEBUG_FS*/
+		struct i2c_client *i2c = PDE_DATA(file_inode(file));
+#endif/*CONFIG_DEBUG_FS*/
+	struct tfa98xx *tfa98xx = i2c_get_clientdata(i2c);
+	int value;
+	char *str = NULL;
+	int ret = 0;
 
+	str = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!str) {
+		ret = -ENOMEM;
+		pr_err("[0x%x] memory allocation failed\n", tfa98xx->i2c->addr);
+		goto r_c_err;
+	}
+	mutex_lock(&tfa98xx->dsp_lock);
+	value = tfa98xx_get_exttemp_v6(tfa98xx->tfa);
+	mutex_unlock(&tfa98xx->dsp_lock);
+
+	if (value < 0) {
+		pr_err("[0x%x] Unable to get exttemp:%d\n", tfa98xx->i2c->addr, value);
+		goto r_err;
+	}
+
+	ret = snprintf(str, PAGE_SIZE, "%d\n", value);
+	if (ret < 0)
+		goto r_err;
+	ret = simple_read_from_buffer(user_buf, count, ppos, str, ret);
+	pr_debug("[0x%x] TEMP : %d\n", tfa98xx->i2c->addr, value);
+r_err:
+        kfree(str);
+r_c_err:
+        return ret;
+}
+#endif
 static ssize_t tfa98xx_dbgfs_start_set(struct file *file,
 				     const char __user *user_buf,
 				     size_t count, loff_t *ppos)
@@ -1287,7 +1375,7 @@ static ssize_t tfa98xx_dbgfs_range_read(struct file *file,
 		goto range_err;
 	}
 
-	ret = snprintf(str, PAGE_SIZE, " Min:%d mOhms, Max:%d mOhms\n",
+	ret = snprintf(str, PAGE_SIZE, " Min:%u mOhms, Max:%u mOhms\n",
 		tfa98xx->tfa->min_mohms, tfa98xx->tfa->max_mohms);
 	pr_warning("%s addr 0x%x, str=%s\n", __func__, tfa98xx->i2c->addr, str);
 
@@ -1625,6 +1713,7 @@ static ssize_t tfa98xx_dbgfs_rpc_send(struct file *file,
 }
 /* -- RPC */
 
+#ifndef OPLUS_ARCH_EXTENDS
 static int tfa98xx_dbgfs_pga_gain_get(void *data, u64 *val)
 {
 	struct i2c_client *i2c = (struct i2c_client *)data;
@@ -1656,10 +1745,55 @@ static int tfa98xx_dbgfs_pga_gain_set(void *data, u64 val)
 
 	return 0;
 }
+#else
+static ssize_t tfa98xx_dbgfs_pga_gain_get(struct file *file,
+				     char __user *user_buf, size_t count,
+				     loff_t *ppos)
+{
+#ifdef CONFIG_DEBUG_FS
+	struct i2c_client *i2c = file->private_data;
+#else /*CONFIG_DEBUG_FS*/
+	struct i2c_client *i2c = PDE_DATA(file_inode(file));
+#endif/*CONFIG_DEBUG_FS*/
 
+	struct tfa98xx *tfa98xx = i2c_get_clientdata(i2c);
+	int value;
+	char *str = NULL;
+	int ret = 0;
 
+	str = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!str) {
+		ret = -ENOMEM;
+		pr_err("[0x%x] memory allocation failed\n", tfa98xx->i2c->addr);
+		goto r_c_err;
+	}
+	value = tfa_get_pga_gain(tfa98xx->tfa);
+	if (value < 0) {
+		pr_err("[0x%x] Unable to check pga gain: %d\n", tfa98xx->i2c->addr, value);
+		goto r_err;
+	}
+
+	ret = snprintf(str, PAGE_SIZE, "%d\n", value);
+	if (ret < 0)
+		goto r_err;
+	ret = simple_read_from_buffer(user_buf, count, ppos, str, ret);
+
+r_err:
+        kfree(str);
+r_c_err:
+        return ret;
+}
+#endif
+#ifndef OPLUS_ARCH_EXTENDS
 DEFINE_SIMPLE_ATTRIBUTE(tfa98xx_dbgfs_calib_otc_fops, tfa98xx_dbgfs_otc_get,
 						tfa98xx_dbgfs_otc_set, "%llu\n");
+#else
+static const struct file_operations tfa98xx_dbgfs_calib_otc_fops = {
+	.open = simple_open,
+	.read = tfa98xx_dbgfs_otc_get,
+	.llseek = default_llseek,
+};
+#endif
 #ifndef OPLUS_ARCH_EXTENDS
 DEFINE_SIMPLE_ATTRIBUTE(tfa98xx_dbgfs_calib_mtpex_fops, tfa98xx_dbgfs_mtpex_get,
 						tfa98xx_dbgfs_mtpex_set, "%llu\n");
@@ -1670,11 +1804,27 @@ static const struct file_operations tfa98xx_dbgfs_calib_mtpex_fops = {
 	.llseek = default_llseek,
 };
 #endif
+#ifndef OPLUS_ARCH_EXTENDS
 DEFINE_SIMPLE_ATTRIBUTE(tfa98xx_dbgfs_calib_temp_fops, tfa98xx_dbgfs_temp_get,
 						tfa98xx_dbgfs_temp_set, "%llu\n");
+#else
+static const struct file_operations tfa98xx_dbgfs_calib_temp_fops = {
+	.open = simple_open,
+	.read = tfa98xx_dbgfs_temp_get,
+	.llseek = default_llseek,
+};
 
+#endif
+#ifndef OPLUS_ARCH_EXTENDS
 DEFINE_SIMPLE_ATTRIBUTE(tfa98xx_dbgfs_pga_gain_fops, tfa98xx_dbgfs_pga_gain_get,
 						tfa98xx_dbgfs_pga_gain_set, "%llu\n");
+#else
+static const struct file_operations tfa98xx_dbgfs_pga_gain_fops = {
+	.open = simple_open,
+	.read = tfa98xx_dbgfs_pga_gain_get,
+	.llseek = default_llseek,
+};
+#endif
 
 static const struct file_operations tfa98xx_dbgfs_calib_start_fops = {
 	.open = simple_open,
@@ -2295,6 +2445,7 @@ static int tfa98xx_get_cal_ctl(struct snd_kcontrol *kcontrol,
 	mutex_lock(&tfa98xx_mutex);
 	list_for_each_entry(tfa98xx, &tfa98xx_device_list, list) {
 		mutex_lock(&tfa98xx->dsp_lock);
+		dev_info(tfa98xx->dev, "%s: get calibration\n", __func__);
 		ucontrol->value.integer.value[tfa98xx->tfa->dev_idx] = tfa_dev_mtp_get(tfa98xx->tfa, TFA_MTP_RE25_PRIM);
 		mutex_unlock(&tfa98xx->dsp_lock);
 	}
@@ -2380,6 +2531,239 @@ static int tfa98xx_get_stereo_ctl(struct snd_kcontrol *kcontrol,
 
 #endif /* OPLUS_ARCH_EXTENDS */
 
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+#define OPLUS_AUDIO_EVENTID_SMARTPA_ERR    10041
+#define OPLUS_AUDIO_EVENTID_SPK_ERR        10042
+#define ERROR_INFO_MAX_LEN                 32
+
+#define REG_BITS  16
+#define TFA9874_STATUS_NORMAL_VALUE    ((0x850F<<REG_BITS) + 0x16)/*reg 0x13 high 16 bits and 0x10 low 16 bits*/
+#define TFA9874_STATUS_CHECK_MASK      ((0x300<<REG_BITS) + 0x9C)/*reg 0x10 mask bit2~4, bit7, reg 0x13 mask bit8 , bit9 */
+#define TFA9873_STATUS_NORMAL_VALUE    ((0x850F<<REG_BITS) + 0x56) /*reg 0x13 high 16 bits and 0x10 low 16 bits*/
+#define TFA9873_STATUS_CHECK_MASK      ((0x300<<REG_BITS) + 0x15C)/*reg 0x10 mask bit2~4, bit6, bit8, reg 0x13 mask bit8 , bit9*/
+
+static ktime_t last_fb = 0;
+static bool g_chk_err = false;
+static char const *tfa98xx_check_feedback_text[] = {"Off", "On"};
+static const struct soc_enum tfa98xx_check_feedback_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tfa98xx_check_feedback_text), tfa98xx_check_feedback_text);
+
+enum {
+	PA_TFA9874 = 0,
+	PA_TFA9873,
+	PA_MAX
+};
+
+static int g_pa_type = PA_MAX;
+
+struct check_status_err {
+	int bit;
+	uint32_t err_val;
+	char info[ERROR_INFO_MAX_LEN];
+};
+static const struct check_status_err check_err_tfa9874[] = {
+	/*register 0x10 check bits*/
+	{2,             0, "OverTemperature"},
+	{3,             1, "CurrentHigh"},
+	{4,             0, "VbatLow"},
+	{7,             1, "NoClock"},
+	/*register 0x13 check bits*/
+	{8 + REG_BITS,  0, "VbatHigh"},
+	{9 + REG_BITS,  1, "Clipping"},
+};
+
+static const struct check_status_err check_err_tfa9873[] = {
+	/*register 0x10 check bits*/
+	{2,             0, "OverTemperature"},
+	{3,             1, "CurrentHigh"},
+	{4,             0, "VbatLow"},
+	{6,             0, "UnstableClk"},
+	{8,             1, "NoClock"},
+	/*register 0x13 check bits*/
+	{8 + REG_BITS,  0, "VbatHigh"},
+	{9 + REG_BITS,  1, "Clipping"},
+};
+
+const unsigned char fb_regs[] = {0x00, 0x01, 0x02, 0x04, 0x05, 0x11, 0x14, 0x15, 0x16};
+
+static int tfa98xx_check_status_reg(void )
+{
+	struct tfa98xx *tfa98xx;
+	uint32_t reg_val = 0;
+	uint16_t reg10 = 0, reg13 = 0, reg_tmp = 0;
+	int flag = 0;
+	char fd_buf[MM_KEVENT_MAX_PAYLOAD_SIZE] = {0};
+	char info[MM_KEVENT_MAX_PAYLOAD_SIZE] = {0};
+	int offset = 0;
+	enum Tfa98xx_Error err;
+	int i, num = 0;
+
+	if (!g_chk_err) {
+		return 0;
+	}
+	if ((g_pa_type != PA_TFA9874) && (g_pa_type != PA_TFA9873)) {
+		return 0;
+	}
+	if ((last_fb !=0)  && ktime_before(ktime_get(), ktime_add_ms(last_fb, MM_FB_KEY_RATELIMIT_5MIN))) {
+		return 0;
+	}
+	mutex_lock(&tfa98xx_mutex);
+	/* check status register 0x10 value */
+	list_for_each_entry(tfa98xx, &tfa98xx_device_list, list) {
+		num++;
+		err = tfa98xx_read_register16_v6(tfa98xx->tfa, 0x10, &reg10);
+		if (Tfa98xx_Error_Ok == err) {
+			err = tfa98xx_read_register16_v6(tfa98xx->tfa, 0x13, &reg13);
+		}
+		pr_info("%s: read SPK%d status regs ret=%d, reg[0x10]=0x%x, reg[0x13]=0x%x", __func__, num, err, reg10, reg13);
+
+		if (Tfa98xx_Error_Ok == err) {
+			reg_val = (reg13 << REG_BITS) + reg10;
+			flag = 0;
+			if ((g_pa_type == PA_TFA9874) &&
+					((TFA9874_STATUS_NORMAL_VALUE&TFA9874_STATUS_CHECK_MASK) != (reg_val&TFA9874_STATUS_CHECK_MASK))) {
+				offset = strlen(info);
+				scnprintf(info + offset, sizeof(info) - offset - 1,
+						"TFA9874 SPK%d:reg[0x10]=0x%x,reg[0x13]=0x%x,", num, reg10, reg13);
+				for (i = 0; i < ARRAY_SIZE(check_err_tfa9874); i++) {
+					if (check_err_tfa9874[i].err_val == (1 & (reg_val>>check_err_tfa9874[i].bit))) {
+						offset = strlen(info);
+						scnprintf(info + offset, sizeof(info) - offset - 1, "%s,", check_err_tfa9874[i].info);
+					}
+				}
+				flag = 1;
+			} else if ((g_pa_type == PA_TFA9873) &&
+					((TFA9873_STATUS_NORMAL_VALUE&TFA9873_STATUS_CHECK_MASK) != (reg_val&TFA9873_STATUS_CHECK_MASK))) {
+				offset = strlen(info);
+				scnprintf(info + offset, sizeof(info) - offset - 1,
+						"TFA9873 SPK%d:reg[0x10]=0x%x,reg[0x13]=0x%x,", num, reg10, reg13);
+				for (i = 0; i < ARRAY_SIZE(check_err_tfa9873); i++) {
+					if (check_err_tfa9873[i].err_val == (1 & (reg_val>>check_err_tfa9873[i].bit))) {
+						offset = strlen(info);
+						scnprintf(info + offset, sizeof(info) - offset - 1, "%s,", check_err_tfa9873[i].info);
+					}
+				}
+				flag = 1;
+			}
+
+			/* read other registers */
+			if (flag == 1) {
+				offset = strlen(info);
+				scnprintf(info + offset, sizeof(info) - offset - 1, "(");
+				for (i = 0; i < sizeof(fb_regs); i++) {
+					err = tfa98xx_read_register16_v6(tfa98xx->tfa, fb_regs[i], &reg_tmp);
+					if (Tfa98xx_Error_Ok == err) {
+						offset = strlen(info);
+						scnprintf(info + offset, sizeof(info) - offset - 1, "%x,", reg_tmp);
+					} else {
+						break;
+					}
+				}
+				offset = strlen(info);
+				scnprintf(info + offset, sizeof(info) - offset - 1, "),");
+			}
+		} else {
+			offset = strlen(info);
+			scnprintf(info + offset, sizeof(info) - offset - 1, "%s SPK%d: failed to read regs 0x10 and 0x13, error=%d,", \
+					(g_pa_type == PA_TFA9873) ? "TFA9873" : "TFA9874", num, err);\
+			last_fb = ktime_get();
+		}
+	}
+	mutex_unlock(&tfa98xx_mutex);
+
+	/* feedback the check error */
+	offset = strlen(info);
+	if ((offset > 0) && (offset < MM_KEVENT_MAX_PAYLOAD_SIZE)) {
+		fd_buf[offset] = '\0';
+		scnprintf(fd_buf, sizeof(fd_buf) - 1, "payload@@%s", info);
+		mm_fb_audio_kevent_named(OPLUS_AUDIO_EVENTID_SMARTPA_ERR,
+				MM_FB_KEY_RATELIMIT_5MIN, fd_buf);
+		pr_err("%s: fd_buf=%s\n", __func__, fd_buf);
+	}
+
+	return 1;
+}
+
+static int tfa98xx_set_check_feedback(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	int need_chk = ucontrol->value.integer.value[0];
+
+	pr_info("%s: need_chk = %d\n", __func__, need_chk);
+	g_chk_err = need_chk;
+
+	return 1;
+}
+
+static int tfa98xx_get_check_feedback(struct snd_kcontrol *kcontrol,
+							struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = g_chk_err;
+	pr_info("%s: g_chk_err = %d\n", __func__, g_chk_err);
+
+	return 0;
+}
+
+static const struct snd_kcontrol_new tfa98xx_check_feedback[] = {
+	SOC_ENUM_EXT("TFA_CHECK_FEEDBACK", tfa98xx_check_feedback_enum,
+			   tfa98xx_get_check_feedback, tfa98xx_set_check_feedback),
+};
+
+static int tfa98xx_check_speaker_status(struct tfa98xx *tfa98xx)
+{
+	char fd_buf[MM_KEVENT_MAX_PAYLOAD_SIZE] = {0};
+	enum Tfa98xx_Error err = Tfa98xx_Error_Ok;
+	char buffer[6] = {0};
+
+	if (!g_chk_err) {
+		return 0;
+	}
+	if ((g_pa_type != PA_TFA9874) && (g_pa_type != PA_TFA9873)) {
+		return 0;
+	}
+	if ((last_fb !=0)  && ktime_before(ktime_get(), ktime_add_ms(last_fb, MM_FB_KEY_RATELIMIT_5MIN))) {
+		return 0;
+	}
+
+	mutex_lock(&tfa98xx->dsp_lock);
+	//Get the GetStatusChange results
+	err = tfa_dsp_cmd_id_write_read_v6(tfa98xx->tfa, MODULE_FRAMEWORK,
+			FW_PAR_ID_GET_STATUS_CHANGE, 6, (unsigned char *)buffer);
+	mutex_unlock(&tfa98xx->dsp_lock);
+
+	pr_info("%s: ret=%d, get value=%d\n", __func__, err, buffer[2]);
+
+	if (err == Tfa98xx_Error_Ok) {
+		if (buffer[2] & 0x6) {
+			scnprintf(fd_buf, sizeof(fd_buf) - 1, "payload@@");
+			if (buffer[2] & 0x2) {
+				pr_err("%s: ##ERROR## Primary SPK hole blocked or damaged event detected 0x%x\n",
+						__func__, buffer[2]);
+				scnprintf(fd_buf + strlen(fd_buf),
+						sizeof(fd_buf) - strlen(fd_buf), " SPK1 damaged or hole blocked");
+			}
+			if ((tfa98xx_device_count == 2) && (buffer[2] & 0x4)) {
+				pr_err("%s: ##ERROR## Second SPK hole blocked or SPK damaged event detected 0x%x\n",
+						__func__, buffer[2]);
+				scnprintf(fd_buf + strlen(fd_buf),
+						sizeof(fd_buf) - strlen(fd_buf), " SPK2 damaged or hole blocked");
+			}
+			mm_fb_audio_kevent_named(OPLUS_AUDIO_EVENTID_SPK_ERR,
+					MM_FB_KEY_RATELIMIT_5MIN, fd_buf);
+			pr_err("%s: fd_buf=%s\n", __func__, fd_buf);
+		}
+	} else {
+		scnprintf(fd_buf, sizeof(fd_buf) - 1, "payload@@spk protection algorithm error, ret=%d,", err);
+		mm_fb_audio_kevent_named(OPLUS_AUDIO_EVENTID_SMARTPA_ERR,
+				MM_FB_KEY_RATELIMIT_5MIN, fd_buf);
+		last_fb = ktime_get();
+		pr_err("%s: tfa_dsp_cmd_id_write_read_v6 err = %d\n", __func__, err);
+	}
+
+	return err;
+}
+#endif /*OPLUS_FEATURE_MM_FEEDBACK*/
+
 static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 {
 	int prof, nprof, mix_index = 0;
@@ -2387,6 +2771,7 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 	char *name;
 	struct tfa98xx_baseprofile *bprofile;
 
+	dev_info(tfa98xx->dev, "%s: enter\n", __func__);
 	/* Create the following controls:
 	 *  - enum control to select the active profile
 	 *  - one volume control for each profile hosting a vstep
@@ -2517,6 +2902,17 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 	mix_index++;
 	#endif /* OPLUS_ARCH_EXTENDS */
 
+	#ifdef OPLUS_ARCH_EXTENDS
+	if (mix_index > nr_controls) {
+		pr_err("%s: error: mix_index(%d) > nr_controls(%d), memory out of bounds\n",
+					__func__, mix_index, nr_controls);
+		devm_kfree(tfa98xx->component->dev, tfa98xx_controls);
+		tfa98xx_controls = NULL;
+		return -ENOMEM;
+	}
+	#endif /*OPLUS_ARCH_EXTENDS*/
+
+	dev_info(tfa98xx->dev, "%s: done\n", __func__);
 	return snd_soc_add_component_controls(tfa98xx->component,
 		tfa98xx_controls, mix_index);
 }
@@ -2539,8 +2935,8 @@ static int tfa98xx_append_i2c_address(struct device *dev,
 {
 	char buf[50];
 	int i;
-	int i2cbus = i2c->adapter->nr;
-	int addr = i2c->addr;
+	unsigned int i2cbus = (unsigned int)(i2c->adapter->nr);
+	unsigned int addr = i2c->addr;
 	if (dai_drv && num_dai > 0)
 		for(i = 0; i < num_dai; i++) {
 			snprintf(buf, 50, "%s-%x-%x",dai_drv[i].name, i2cbus,
@@ -2809,6 +3205,9 @@ tfa98xx_write_dsp(struct tfa_device *tfa,  int num_bytes, const char *command_bu
 	int err = 0;
 	//struct tfa98xx *tfa98xx = (struct tfa98xx *)tfa->data;
 	uint8_t *buffer = NULL;
+	#ifdef OPLUS_ARCH_EXTENDS
+	enum Tfa98xx_Error error = Tfa98xx_Error_Ok;
+	#endif
 
 	buffer = kmalloc(num_bytes, GFP_KERNEL);
 	if ( buffer == NULL ) {
@@ -2823,6 +3222,9 @@ tfa98xx_write_dsp(struct tfa_device *tfa,  int num_bytes, const char *command_bu
 	err = send_tfa_cal_apr(buffer, num_bytes, false);
 	if (err) {
 		pr_err("[0x%x] dsp_msg error: %d\n", tfa->slave_address, err);
+		#ifdef OPLUS_ARCH_EXTENDS
+		error = Tfa98xx_Error_Fail;
+		#endif
 	}
 
 	//mutex_unlock(&tfa98xx->dsp_lock);
@@ -2830,7 +3232,11 @@ tfa98xx_write_dsp(struct tfa_device *tfa,  int num_bytes, const char *command_bu
 
 	mdelay(5);
 
+	#ifndef OPLUS_ARCH_EXTENDS
 	return Tfa98xx_Error_Ok;
+	#else
+	return error;
+	#endif
 }
 
 /*
@@ -3058,7 +3464,7 @@ static void tfa98xx_container_loaded(const struct firmware *cont, void *context)
 		return;
 	}
 
-	pr_info("loaded %s - size: %zu\n", fw_name, cont->size);
+	dev_info(tfa98xx->dev, "%s: loaded %s - size: %zu\n", __func__, fw_name, cont->size);
 
 	mutex_lock(&tfa98xx_mutex);
 	if (tfa98xx_container == NULL) {
@@ -3094,7 +3500,7 @@ static void tfa98xx_container_loaded(const struct firmware *cont, void *context)
 
 		tfa98xx_container = container;
 	} else {
-		pr_info("container file already loaded...\n");
+		dev_info(tfa98xx->dev, "%s: container file already loaded...\n", __func__);
 		container = tfa98xx_container;
 		release_firmware(cont);
 	}
@@ -3153,7 +3559,7 @@ static void tfa98xx_container_loaded(const struct firmware *cont, void *context)
 	}
 
 	tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_OK;
-	pr_info("Firmware init complete\n");
+	dev_info(tfa98xx->dev, "%s: Firmware init complete\n", __func__);
 
 	if (no_start != 0)
 		return;
@@ -3861,6 +4267,15 @@ static int tfa98xx_mute(struct snd_soc_dai *dai, int mute, int stream)
 		/* stop DSP only when both playback and capture streams
 		 * are deactivated
 		 */
+
+		#ifdef OPLUS_FEATURE_MM_FEEDBACK
+		if (g_chk_err) {
+			tfa98xx_check_status_reg();
+			tfa98xx_check_speaker_status(tfa98xx);
+			g_chk_err = false;
+		}
+		#endif /* OPLUS_FEATURE_MM_FEEDBACK */
+
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 			tfa98xx->pstream = 0;
 		else
@@ -3983,7 +4398,7 @@ static int tfa98xx_probe(struct snd_soc_component *component)
 	struct tfa98xx *tfa98xx = snd_soc_component_get_drvdata(component);
 	int ret = 0;
 
-	pr_info("%s\n", __func__);
+	dev_info(tfa98xx->dev, "%s: enter\n", __func__);
 
 	#ifdef OPLUS_ARCH_EXTENDS
     tfa98xx_whole_v6 = tfa98xx;
@@ -4006,7 +4421,7 @@ static int tfa98xx_probe(struct snd_soc_component *component)
 	tfa98xx->component = component;
 
 	ret = tfa98xx_load_container(tfa98xx);
-	pr_info("Container loading requested: %d\n", ret);
+	dev_info(tfa98xx->dev, "%s: Container loading requested: %d\n", __func__, ret);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
 	codec->control_data = tfa98xx->regmap;
@@ -4038,12 +4453,16 @@ static int tfa98xx_probe(struct snd_soc_component *component)
 		tfadsp_volume_controls, ARRAY_SIZE(tfadsp_volume_controls));
 	#endif /* OPLUS_FEATURE_FADE_IN */
 
+	#ifdef OPLUS_FEATURE_MM_FEEDBACK
+	snd_soc_add_component_controls(tfa98xx->component,
+				   tfa98xx_check_feedback, ARRAY_SIZE(tfa98xx_check_feedback));
+	#endif
 	#ifdef OPLUS_FEATURE_SMARTPA_PM
 	add_smartpa_pm_controls(tfa98xx->component);
 	#endif /* OPLUS_FEATURE_SMARTPA_PM */
 
-	dev_info(component->dev, "tfa98xx codec registered (%s) ret=%d",
-							tfa98xx->fw.name, ret);
+	dev_info(component->dev, "%s: codec registered (%s) ret=%d",
+							__func__, tfa98xx->fw.name, ret);
 
 	return ret;
 }
@@ -4277,6 +4696,9 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 	#ifdef OPLUS_ARCH_EXTENDS
 	int i = 0;
 	int retries = 5;
+	#ifdef OPLUS_FEATURE_TFA98XX_VI_FEEDBACK
+	u32 tfa_i2s = 0;
+	#endif /*OPLUS_FEATURE_TFA98XX_VI_FEEDBACK*/
 	#endif /* OPLUS_ARCH_EXTENDS */
 
 	#ifdef OPLUS_FEATURE_FADE_IN
@@ -4417,12 +4839,18 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 			tfa98xx->flags |= TFA98XX_FLAG_CALIBRATION_CTL;
 			tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
 			tfa98xx->flags |= TFA98XX_FLAG_ADAPT_NOISE_MODE; /***MCH_TO_TEST***/
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+			g_pa_type = PA_TFA9873;
+#endif
 			break;
 		case 0x74: /* tfa9874 */
 			pr_info("TFA9874 detected\n");
 			tfa98xx->flags |= TFA98XX_FLAG_MULTI_MIC_INPUTS;
 			tfa98xx->flags |= TFA98XX_FLAG_CALIBRATION_CTL;
 			tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
+#ifdef OPLUS_FEATURE_MM_FEEDBACK
+			g_pa_type = PA_TFA9874;
+#endif
 			break;
 		case 0x88: /* tfa9888 */
 			pr_info("TFA9888 detected\n");
@@ -4483,6 +4911,20 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 	tfa98xx->tfa->cachep = tfa98xx_cache;
 
 	#ifdef OPLUS_ARCH_EXTENDS
+	#ifdef OPLUS_FEATURE_TFA98XX_VI_FEEDBACK
+	ret = of_property_read_u32(i2c->dev.of_node, "tfa_use_i2s", &tfa_i2s);
+	if (ret) {
+		pr_info("no defined tfa_use_i2s, use primary i2s");
+	} else {
+		extend_set_tfa_i2s = symbol_request(set_tfa_i2s);
+		if(extend_set_tfa_i2s) {
+			extend_set_tfa_i2s(tfa_i2s);
+		} else {
+			pr_info("no defined Function:set_tfa_i2s, use primary i2s");
+		}
+	}
+	#endif /*OPLUS_FEATURE_TFA98XX_VI_FEEDBACK*/
+
 	ret = of_property_read_u32(i2c->dev.of_node, "tfa_min_range", &tfa98xx->tfa->min_mohms);
 	if (ret) {
 		dev_err(&i2c->dev, "Failed to parse spk_min_range node\n");
@@ -4495,7 +4937,7 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c,
 		tfa98xx->tfa->max_mohms = SMART_PA_RANGE_DEFAULT_MAX;
 	}
 
-	dev_err(&i2c->dev, "min_mohms=%d, max_mohms=%d\n",
+	dev_err(&i2c->dev, "min_mohms=%u, max_mohms=%u\n",
 			tfa98xx->tfa->min_mohms, tfa98xx->tfa->max_mohms);
 
 	/* 0-left/top, 1-right/bottom, 0xff-default, not initialized */

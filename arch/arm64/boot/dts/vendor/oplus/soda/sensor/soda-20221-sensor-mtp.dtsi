@@ -1,18 +1,21 @@
 #include <dt-bindings/clock/qcom,gcc-bengal.h>
 
 &soc {
+    sensor_fb {
+		compatible = "oplus,sensor-feedback";
+	};
 	oplus_sensor {
 			compatible = "oplus,sensor-devinfo";
 			als-row-coe = <200>;
 			/*enum {LSM6DSM = 0x01, BMI160 = 0x02, LSM6DS3 = 0x04, BMI260 = 0x08};*/
 			gsensor@0 {
-					sensor-name = <0x20>;//LIS2HH12
+					sensor-name = <0x81>;//LIS2HH12
 					sensor-direction = <10>;
 					sensor-index = <0>;//source num
 					sensor-type = <0>;//OPPO_ACCEL
 			};
 			gsensor@1 {
-					sensor-name = <0x40>;//BMA420
+					sensor-name = <0x82>;//BMA420
 					sensor-direction = <10>;
 					sensor-index = <1>;//source num
 					sensor-type = <0>;//OPPO_ACCEL

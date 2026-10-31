@@ -39,10 +39,6 @@
 #include "cqhci.h"
 #include "cqhci-crypto-qti.h"
 
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-#include "sdInfo/sdinfo.h"
-#endif
-
 #define QOS_REMOVE_DELAY_MS	10
 #define CORE_POWER		0x0
 #define CORE_SW_RST		(1 << 7)
@@ -5287,10 +5283,6 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto out;
 	}
-
-#ifdef OPLUS_FEATURE_SDCARD_INFO
-	sdcard_remove_attr_init_sysfs(&pdev->dev);
-#endif
 
 	if (of_find_compatible_node(NULL, NULL, "qcom,sdhci-msm-v5")) {
 		msm_host->mci_removed = true;

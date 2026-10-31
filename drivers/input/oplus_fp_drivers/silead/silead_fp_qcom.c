@@ -32,6 +32,15 @@ static void silfp_hw_poweron(struct silfp_data *fp_dev)
     int err = 0;
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
 
+    if (fp_dev->sld_gpio_pwr_flag == 1) {
+        if ( fp_dev->avdd_port > 0 ) {
+            err = gpio_direction_output(fp_dev->avdd_port, 1);
+        }
+        if ( fp_dev->vddio_port > 0 ) {
+            err = gpio_direction_output(fp_dev->vddio_port, 1);
+        }
+        goto fp_out;
+    }
 #ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
     /* Power control by Regulators(LDO) */
     if ( fp_dev->avdd_ldo ) {
@@ -63,21 +72,24 @@ static void silfp_hw_poweron(struct silfp_data *fp_dev)
         err = pinctrl_select_state(fp_dev->pin.pinctrl, fp_dev->pin.pins_vddio_h);
     }
 #endif /* BSP_SIL_POWER_SUPPLY_PINCTRL */
-
-#ifdef BSP_SIL_POWER_SUPPLY_GPIO
-    if ( fp_dev->avdd_port > 0 ) {
-        err = gpio_direction_output(fp_dev->avdd_port, 1);
-    }
-    if ( fp_dev->vddio_port > 0 ) {
-        err = gpio_direction_output(fp_dev->vddio_port, 1);
-    }
-#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+fp_out:
     fp_dev->power_is_off = 0;
     LOG_MSG_DEBUG(INFO_LOG, "%s: power supply ret:%d \n", __func__, err);
 }
 
 static void silfp_hw_poweroff(struct silfp_data *fp_dev)
 {
+    int err = 0;
+    if (fp_dev->sld_gpio_pwr_flag == 1) {
+        if ( fp_dev->avdd_port > 0 ) {
+            gpio_direction_output(fp_dev->avdd_port, 0);
+        }
+        if ( fp_dev->vddio_port > 0 ) {
+            gpio_direction_output(fp_dev->vddio_port, 0);
+        }
+        goto fp_out;
+    }
+
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
 #ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
     /* Power control by Regulators(LDO) */
@@ -103,20 +115,27 @@ static void silfp_hw_poweroff(struct silfp_data *fp_dev)
     //fp_dev->pin.pins_avdd_h = NULL;
     //fp_dev->pin.pins_vddio_h = NULL;
 #endif /* BSP_SIL_POWER_SUPPLY_PINCTRL */
-
-#ifdef BSP_SIL_POWER_SUPPLY_GPIO
-    if ( fp_dev->avdd_port > 0 ) {
-        gpio_direction_output(fp_dev->avdd_port, 0);
-    }
-    if ( fp_dev->vddio_port > 0 ) {
-        gpio_direction_output(fp_dev->vddio_port, 0);
-    }
-#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+fp_out:
     fp_dev->power_is_off = 1;
 }
 
 static void silfp_power_deinit(struct silfp_data *fp_dev)
 {
+    int err = 0;
+    if (fp_dev->sld_gpio_pwr_flag == 1) {
+        if ( fp_dev->avdd_port > 0 ) {
+            gpio_direction_output(fp_dev->avdd_port, 0);
+            gpio_free(fp_dev->avdd_port);
+            fp_dev->avdd_port = 0;
+        }
+        if ( fp_dev->vddio_port > 0 ) {
+            gpio_direction_output(fp_dev->vddio_port, 0);
+            gpio_free(fp_dev->vddio_port);
+            fp_dev->vddio_port = 0;
+        }
+        goto fp_out;
+    }
+
     LOG_MSG_DEBUG(INFO_LOG, "[%s] enter.\n", __func__);
 #ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
     /* Power control by Regulators(LDO) */
@@ -146,18 +165,8 @@ static void silfp_power_deinit(struct silfp_data *fp_dev)
     fp_dev->pin.pins_vddio_h = NULL;
 #endif /* BSP_SIL_POWER_SUPPLY_PINCTRL */
 
-#ifdef BSP_SIL_POWER_SUPPLY_GPIO
-    if ( fp_dev->avdd_port > 0 ) {
-        gpio_direction_output(fp_dev->avdd_port, 0);
-        gpio_free(fp_dev->avdd_port);
-        fp_dev->avdd_port = 0;
-    }
-    if ( fp_dev->vddio_port > 0 ) {
-        gpio_direction_output(fp_dev->vddio_port, 0);
-        gpio_free(fp_dev->vddio_port);
-        fp_dev->vddio_port = 0;
-    }
-#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+fp_out:
+    LOG_MSG_DEBUG(INFO_LOG, "[%s] exit\n", __func__);
 }
 
 /* -------------------------------------------------------------------- */
@@ -247,6 +256,13 @@ static int silfp_parse_dts(struct silfp_data* fp_dev)
     }
 #endif /* BSP_SIL_POWER_SUPPLY_PINCTRL */
 #endif /* QSEE_V4 */
+
+    if (of_property_read_bool(fp_dev->spi->dev.of_node, "sld,enable-via-gpio")) {
+        dev_err(fp_dev->dev, "%s, Using GPIO Power \n", __func__);
+        fp_dev->sld_gpio_pwr_flag = 1;
+    } else {
+        fp_dev->sld_gpio_pwr_flag = 0;
+    }
 
 #ifdef BSP_SIL_POWER_SUPPLY_REGULATOR
     // Todo: use correct settings.
@@ -463,32 +479,30 @@ static int silfp_resource_init(struct silfp_data *fp_dev, struct fp_dev_init_t *
     }
 
     silfp_parse_dts(fp_dev);
-#ifdef BSP_SIL_POWER_SUPPLY_GPIO
-    fp_dev->avdd_port = of_get_named_gpio(fp_dev->spi->dev.of_node, "avdd-gpios", 0);
-    fp_dev->vddio_port = 0;
-    if (fp_dev->avdd_port > 0 ) {
-        gpio_free(fp_dev->avdd_port);
-        ret = gpio_request(fp_dev->avdd_port, "SILFP_AVDD_PIN");
-        gpio_direction_output(fp_dev->avdd_port, 1);
-        if (ret < 0) {
-            LOG_MSG_DEBUG(ERR_LOG, "[%s]  Failed to request GPIO=%d, ret=%d",__func__,(s32)fp_dev->avdd_port, ret);
-            status = -ENODEV;
-            goto err_avdd;
+    if (fp_dev->sld_gpio_pwr_flag == 1) {
+        fp_dev->avdd_port = of_get_named_gpio(fp_dev->spi->dev.of_node, "avdd-gpios", 0);
+    //    fp_dev->vddio_port = of_get_named_gpio(fp_dev->spi->dev.of_node, "vddio-gpios", 0);
+        fp_dev->vddio_port = 0;
+        if ( fp_dev->avdd_port > 0 ) {
+            gpio_free(fp_dev->avdd_port);
+            ret = gpio_request(fp_dev->avdd_port, "SILFP_AVDD_PIN");
+            if (ret < 0) {
+                LOG_MSG_DEBUG(ERR_LOG, "[%s] Failed to request GPIO=%d, ret=%d", __func__, (s32)fp_dev->avdd_port, ret);
+                status = -ENODEV;
+                goto err_avdd;
+            }
         }
-        gpio_set_value(fp_dev->avdd_port, 1);
-        LOG_MSG_DEBUG(ERR_LOG, "[%s] request GPIO=%d, ret=%d",__func__,(s32)fp_dev->avdd_port, ret);
-    }
 
-    if (fp_dev->vddio_port > 0 ) {
-        gpio_free(fp_dev->vddio_port);
-        ret = gpio_request(fp_dev->vddio_port, "SILFP_VDDIO_PIN");
-        if (ret < 0) {
-            LOG_MSG_DEBUG(ERR_LOG, "[%s] Failed to request GPIO=%d, ret=%d",__func__,(s32)fp_dev->vddio_port, ret);
-            status = -ENODEV;
-            goto err_vddio;
+        if ( fp_dev->vddio_port > 0 ) {
+            gpio_free(fp_dev->vddio_port);
+            ret = gpio_request(fp_dev->vddio_port, "SILFP_VDDIO_PIN");
+            if (ret < 0) {
+                LOG_MSG_DEBUG(ERR_LOG, "[%s] Failed to request GPIO=%d, ret=%d", __func__, (s32)fp_dev->vddio_port, ret);
+                status = -ENODEV;
+                goto err_vddio;
+            }
         }
     }
-#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
 	LOG_MSG_DEBUG(INFO_LOG, "before [%s] int_port %d, rst_port %d.\n",__func__,fp_dev->int_port,fp_dev->rst_port);
     silfp_hw_poweron(fp_dev);
     msleep(5);
@@ -574,15 +588,17 @@ err_rst:
 err_irq:
     gpio_free(fp_dev->int_port);
 
-#ifdef BSP_SIL_POWER_SUPPLY_GPIO
     //gpio_free(fp_dev->vddio_port);
 err_vddio:
-    gpio_free(fp_dev->avdd_port);
+    if (fp_dev->sld_gpio_pwr_flag == 1) {
+        gpio_free(fp_dev->avdd_port);
+    }
 
 err_avdd:
-    fp_dev->avdd_port = 0;
-    fp_dev->vddio_port = 0;
-#endif /* BSP_SIL_POWER_SUPPLY_GPIO */
+    if (fp_dev->sld_gpio_pwr_flag == 1) {
+        fp_dev->avdd_port = 0;
+        fp_dev->vddio_port = 0;
+    }
 
 err:
     fp_dev->int_port = 0;

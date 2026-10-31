@@ -95,8 +95,6 @@ obj-$(CONFIG_MMC_CQHCI)			+= cqhci.o
 obj-$(CONFIG_MMC_CQHCI_CRYPTO)		+= cqhci-crypto.o
 obj-$(CONFIG_MMC_CQHCI_CRYPTO_QTI)	+= cqhci-crypto-qti.o
 
-obj-y         += sdInfo/
-
 ifeq ($(CONFIG_CB710_DEBUG),y)
 	CFLAGS-cb710-mmc	+= -DDEBUG
 endif

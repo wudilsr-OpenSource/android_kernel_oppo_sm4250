@@ -30,7 +30,7 @@
 #define PCB_VERSION                (0x2)
 #define RF_INFO                    (0x3)
 #define MODEM_TYPE                (0x4)
-#define OPPO_BOOTMODE            (0x5)
+#define OPLUS_BOOTMODE            (0x5)
 #define SECURE_TYPE                (0x6)
 #define SECURE_STAGE            (0x7)
 #define OCP_NUMBER                (0x8)
@@ -38,7 +38,7 @@
 #define ENG_VERSION                (0xA)
 #define CONFIDENTIAL_STATUS        (0xB)
 #define CDT_INTEGRITY            (0xC)
-#define OPPO_FEATURE            (0xD)
+#define OPLUS_FEATURE            (0xD)
 #define OPERATOR_NAME            (0xE)
 #define PROJECT_TEST            (0x1F)
 
@@ -47,13 +47,12 @@ static ProjectInfoOCDT *g_project = NULL;
 static int newcdt = -1;
 
 static const char* nfc_feature = "nfc_feature";
-static const char* feature_src = "/vendor/etc/nfc/com.oppo.nfc_feature.xml";
+static const char* feature_src = "/vendor/etc/nfc/com.oplus.nfc_feature.xml";
 
 static ProjectInfoOCDT local_ProjectInfoCDT = {0};
 
-struct proc_dir_entry *oppo_info = NULL;
-struct proc_dir_entry *oppo_info_temp = NULL;
-
+struct proc_dir_entry *oplus_info = NULL;
+static int oplus_prj = 0;
 static void init_project_version(void)
 {
     /*for MTK's dts*/
@@ -66,15 +65,7 @@ static void init_project_version(void)
 
 
     if(is_new_cdt()){
-        if(oppo_info){
-            remove_proc_entry("oppoVersion/operatorName", NULL);
-            pr_err("remove proc operatorName\n");
-            remove_proc_entry("oppoVersion/modemType", NULL);
-            pr_err("remove proc modemType\n");
-            remove_proc_entry("oppoVersion/prjVersion", NULL);
-            pr_err("remove proc prjVersion\n");
-        }
-        if(oppo_info_temp){
+        if(oplus_info){
             remove_proc_entry("oplusVersion/operatorName", NULL);
             pr_err("remove proc operatorName\n");
             remove_proc_entry("oplusVersion/modemType", NULL);
@@ -83,13 +74,7 @@ static void init_project_version(void)
             pr_err("remove proc prjVersion\n");
         }
     } else {
-        if(oppo_info){
-            remove_proc_entry("oppoVersion/RFType", NULL);
-            pr_err("remove proc RFType\n");
-            remove_proc_entry("oppoVersion/prjName", NULL);
-            pr_err("remove proc prjName\n");
-        }
-        if(oppo_info_temp){
+        if(oplus_info){
             remove_proc_entry("oplusVersion/RFType", NULL);
             pr_err("remove proc RFType\n");
             remove_proc_entry("oplusVersion/prjName", NULL);
@@ -108,6 +93,12 @@ static void init_project_version(void)
         }
 
         ret = of_property_read_u32(np,"nProject", &(local_ProjectInfoCDT.nDataBCDT.ProjectNo));
+        if(ret){
+            pr_err("init_project_version_newcdt nProject fail");
+            return;
+        }
+
+        ret = of_property_read_u32(np, "nPrj", &oplus_prj);
         if(ret){
             pr_err("init_project_version_newcdt nProject fail");
             return;
@@ -161,50 +152,29 @@ static void init_project_version(void)
 
 
         g_project = &local_ProjectInfoCDT;
-    
-	    if(g_project->nDataBCDT.ProjectNo < 100000){
-			pr_err("KE new cdt newcdt:%d nVersion:%d Project:%d, Dtsi:%d, Audio:%d, nRF:%d, PCB:%d Feature0-9:%d %d %d %d %d %d %d %d %d %d eng_version:%d confidential:%d\n",
-				newcdt,
-				g_project->Version,
-				g_project->nDataBCDT.ProjectNo,
-				g_project->nDataBCDT.DtsiNo,
-				g_project->nDataBCDT.AudioIdx,
-				g_project->nDataSCDT.RF,
-				g_project->nDataSCDT.PCB,
-				g_project->nDataBCDT.Feature[0],
-				g_project->nDataBCDT.Feature[1],
-				g_project->nDataBCDT.Feature[2],
-				g_project->nDataBCDT.Feature[3],
-				g_project->nDataBCDT.Feature[4],
-				g_project->nDataBCDT.Feature[5],
-				g_project->nDataBCDT.Feature[6],
-				g_project->nDataBCDT.Feature[7],
-				g_project->nDataBCDT.Feature[8],
-				g_project->nDataBCDT.Feature[9],
-				g_project->nDataECDT.Version,
-				g_project->nDataECDT.Is_confidential);
-		}else{
-			pr_err("KE new cdt newcdt:%d nVersion:%d Project:%X, Dtsi:%X, Audio:%X, nRF:%d, PCB:%d Feature0-9:%d %d %d %d %d %d %d %d %d %d eng_version:%d confidential:%d\n",
-				newcdt,
-				g_project->Version,
-				g_project->nDataBCDT.ProjectNo,
-				g_project->nDataBCDT.DtsiNo,
-				g_project->nDataBCDT.AudioIdx,
-				g_project->nDataSCDT.RF,
-				g_project->nDataSCDT.PCB,
-				g_project->nDataBCDT.Feature[0],
-				g_project->nDataBCDT.Feature[1],
-				g_project->nDataBCDT.Feature[2],
-				g_project->nDataBCDT.Feature[3],
-				g_project->nDataBCDT.Feature[4],
-				g_project->nDataBCDT.Feature[5],
-				g_project->nDataBCDT.Feature[6],
-				g_project->nDataBCDT.Feature[7],
-				g_project->nDataBCDT.Feature[8],
-				g_project->nDataBCDT.Feature[9],
-				g_project->nDataECDT.Version,
-				g_project->nDataECDT.Is_confidential);
-			}
+
+        pr_err("KE new cdt newcdt:%d nVersion:%d Project:%d,Prj:%d, Dtsi:%d, Audio:%d, nRF:%d, PCB:%d Feature0-9:%d %d %d %d %d %d %d %d %d %d eng_version:%d confidential:%d\n",
+            newcdt,
+            g_project->Version,
+            g_project->nDataBCDT.ProjectNo,
+            oplus_prj,
+            g_project->nDataBCDT.DtsiNo,
+            g_project->nDataBCDT.AudioIdx,
+            g_project->nDataSCDT.RF,
+            g_project->nDataSCDT.PCB,
+            g_project->nDataBCDT.Feature[0],
+            g_project->nDataBCDT.Feature[1],
+            g_project->nDataBCDT.Feature[2],
+            g_project->nDataBCDT.Feature[3],
+            g_project->nDataBCDT.Feature[4],
+            g_project->nDataBCDT.Feature[5],
+            g_project->nDataBCDT.Feature[6],
+            g_project->nDataBCDT.Feature[7],
+            g_project->nDataBCDT.Feature[8],
+            g_project->nDataBCDT.Feature[9],
+            g_project->nDataECDT.Version,
+            g_project->nDataECDT.Is_confidential);
+
         pr_err("OCP: %d 0x%x %c %d 0x%x %c\n",
             g_project->nDataSCDT.PmicOcp[0],
             g_project->nDataSCDT.PmicOcp[1],
@@ -214,7 +184,7 @@ static void init_project_version(void)
             g_project->nDataSCDT.PmicOcp[5]);
 
 
-        pr_err("oppo project info loading finished\n");
+        pr_err("oplus project info loading finished\n");
     }
 
 
@@ -242,6 +212,20 @@ unsigned int get_project(void)
 }
 EXPORT_SYMBOL(get_project);
 
+unsigned int get_prj(void)
+{
+    init_project_version();
+
+    if(!is_new_cdt()){
+        return -1;
+    }
+
+	pr_err("call new get_prj() from %s,Prj:%d\n", __FILE__, oplus_prj);
+
+	return g_project? oplus_prj : 0;
+}
+EXPORT_SYMBOL(get_prj);
+
 unsigned int is_project(int project)
 {
     init_project_version();
@@ -261,7 +245,7 @@ unsigned int is_new_cdt(void)/*Q and R is new*/
     np = of_find_node_by_name(NULL, "oplus_project");
     ret = of_property_read_u32(np,"newcdt", &newcdt);
     if(ret){
-//        pr_err("read newcdt fail\n");
+        pr_err("read newcdt fail\n");
 		return 0;
     }
     if(newcdt == 1) {
@@ -285,13 +269,13 @@ unsigned int get_PCB_Version(void)
 }
 EXPORT_SYMBOL(get_PCB_Version);
 
-unsigned int get_Oppo_Boot_Mode(void)
+unsigned int get_Oplus_Boot_Mode(void)
 {
     init_project_version();
 
-    return g_project?g_project->nDataSCDT.OppoBootMode:0;
+    return g_project?g_project->nDataSCDT.OplusBootMode:0;
 }
-EXPORT_SYMBOL(get_Oppo_Boot_Mode);
+EXPORT_SYMBOL(get_Oplus_Boot_Mode);
 
 int32_t get_Modem_Version(void)
 {
@@ -372,13 +356,13 @@ EXPORT_SYMBOL(get_eng_version);
 
 extern char *saved_command_line;
 
-bool oppo_daily_build(void)
+bool oplus_daily_build(void)
 {
     static int daily_build = -1;
     int eng_version = 0;
 
     if(!is_new_cdt()){
-        return oppo_daily_build_oldcdt();
+        return oplus_daily_build_oldcdt();
     }
 
     if (daily_build != -1)
@@ -400,21 +384,21 @@ bool oppo_daily_build(void)
 
     return daily_build;
 }
-EXPORT_SYMBOL(oppo_daily_build);
+EXPORT_SYMBOL(oplus_daily_build);
 
 bool is_confidential(void)
 {
     init_project_version();
 
     if(!is_new_cdt()){
-        return is_confidential_oldcdt();
+        is_confidential_oldcdt();
     }
 
     return g_project?g_project->nDataECDT.Is_confidential:-EINVAL;
 }
 EXPORT_SYMBOL(is_confidential);
 
-uint32_t get_oppo_feature(enum F_INDEX index)
+uint32_t get_oplus_feature(enum F_INDEX index)
 {
     init_project_version();
     if(is_new_cdt()){
@@ -426,7 +410,7 @@ uint32_t get_oppo_feature(enum F_INDEX index)
     else
         return 0;
 }
-EXPORT_SYMBOL(get_oppo_feature);
+EXPORT_SYMBOL(get_oplus_feature);
 
 
 #define SERIALNO_LEN 16
@@ -479,7 +463,7 @@ static void dump_project_test(struct seq_file *s)
     return;
 }
 
-static void dump_oppo_feature(struct seq_file *s)
+static void dump_oplus_feature(struct seq_file *s)
 {
     seq_printf(s, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
         g_project->nDataBCDT.Feature[0],
@@ -539,7 +523,7 @@ static void dump_secure_stage(struct seq_file *s)
     seq_printf(s, "%d", secure_oem_config);
 }
 
-static void update_manifest(struct proc_dir_entry *parent_1, struct proc_dir_entry *parent_2)
+static void update_manifest(struct proc_dir_entry *parent)
 {
     static const char* manifest_src[2] = {
         "/vendor/odm/etc/vintf/manifest_ssss.xml",
@@ -556,34 +540,28 @@ static void update_manifest(struct proc_dir_entry *parent_1, struct proc_dir_ent
     fs = get_fs();
     set_fs(KERNEL_DS);
 
-    if (parent_1 && parent_2) {
+    if (parent) {
         if (substr[0] == '0') {
-            proc_symlink("manifest", parent_1, manifest_src[0]);//single sim
-            proc_symlink("manifest", parent_2, manifest_src[0]);
+            proc_symlink("manifest", parent, manifest_src[0]);//single sim
         }
         else {
-            proc_symlink("manifest", parent_1, manifest_src[1]);
-            proc_symlink("manifest", parent_2, manifest_src[1]);
+            proc_symlink("manifest", parent, manifest_src[1]);
         }
     }
 
     set_fs(fs);
 }
 
+/*Add for diff manifest*/
 static int __init update_feature(void)
 {
     mm_segment_t fs;
     fs = get_fs();
     pr_err("%s: newcdt --  Operator Version [%d]\n", __func__, (get_project()));
     set_fs(KERNEL_DS);
-    if (oppo_info) {
-        if (get_oppo_feature(1) & 0x01) {
-            proc_symlink(nfc_feature, oppo_info, feature_src);
-        }
-    }
-    if (oppo_info_temp) {
-        if (get_oppo_feature(1) & 0x01) {
-            proc_symlink(nfc_feature, oppo_info_temp, feature_src);
+    if (oplus_info) {
+        if (get_oplus_feature(1) & 0x01) {
+            proc_symlink(nfc_feature, oplus_info, feature_src);
         }
     }
     set_fs(fs);
@@ -597,17 +575,13 @@ static int project_read_func(struct seq_file *s, void *v)
 
     switch(Ptr2UINT32(p)) {
     case PROJECT_VERSION:
-	    if(get_project() <100000){
-			seq_printf(s, "%d", get_project());
-		}else{
-			seq_printf(s, "%X", get_project()); 
-		}
+        seq_printf(s, "%d", get_project());
         break;
     case PCB_VERSION:
         seq_printf(s, "%d", get_PCB_Version());
         break;
-    case OPPO_BOOTMODE:
-        seq_printf(s, "%d", get_Oppo_Boot_Mode());
+    case OPLUS_BOOTMODE:
+        seq_printf(s, "%d", get_Oplus_Boot_Mode());
         break;
     case MODEM_TYPE:
     case RF_INFO:
@@ -637,8 +611,8 @@ static int project_read_func(struct seq_file *s, void *v)
     case CDT_INTEGRITY:
         seq_printf(s, "%d", cdt_integrity);
         break;
-    case OPPO_FEATURE:
-        dump_oppo_feature(s);
+    case OPLUS_FEATURE:
+        dump_oplus_feature(s);
         break;
     case OPERATOR_NAME:
         seq_printf(s, "%d", get_Operator_Version());
@@ -670,160 +644,91 @@ static const struct file_operations project_info_fops = {
     .release = single_release,
 };
 
-static int __init oppo_project_init(void)
+static int __init oplus_project_init(void)
 {
     struct proc_dir_entry *p_entry;
 
-    oppo_info_temp = proc_mkdir("oplusVersion", NULL);
-    oppo_info = proc_mkdir("oppoVersion", NULL);
-    if (!oppo_info || !oppo_info_temp) {
+    oplus_info = proc_mkdir("oplusVersion", NULL);
+    if (!oplus_info) {
         goto error_init;
     }
 
-    p_entry = proc_create_data("prjName", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(PROJECT_VERSION));
+    p_entry = proc_create_data("prjName", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(PROJECT_VERSION));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("prjVersion", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(PROJECT_VERSION));
+    p_entry = proc_create_data("prjVersion", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(PROJECT_VERSION));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("pcbVersion", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(PCB_VERSION));
+    p_entry = proc_create_data("pcbVersion", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(PCB_VERSION));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("oplusBootmode", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(OPPO_BOOTMODE));
+    p_entry = proc_create_data("oplusBootmode", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(OPLUS_BOOTMODE));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("RFType", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(RF_INFO));
+    p_entry = proc_create_data("RFType", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(RF_INFO));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("modemType", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(MODEM_TYPE));
+    p_entry = proc_create_data("modemType", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(MODEM_TYPE));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("operatorName", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(OPERATOR_NAME));
+    p_entry = proc_create_data("operatorName", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(OPERATOR_NAME));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("secureType", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(SECURE_TYPE));
+    p_entry = proc_create_data("secureType", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(SECURE_TYPE));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("secureStage", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(SECURE_STAGE));
+    p_entry = proc_create_data("secureStage", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(SECURE_STAGE));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("ocp", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(OCP_NUMBER));
+    p_entry = proc_create_data("ocp", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(OCP_NUMBER));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("serialID", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(SERIAL_NUMBER));
+    p_entry = proc_create_data("serialID", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(SERIAL_NUMBER));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("engVersion", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(ENG_VERSION));
+    p_entry = proc_create_data("engVersion", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(ENG_VERSION));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("isConfidential", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(CONFIDENTIAL_STATUS));
+    p_entry = proc_create_data("isConfidential", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(CONFIDENTIAL_STATUS));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("cdt", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(CDT_INTEGRITY));
+    p_entry = proc_create_data("cdt", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(CDT_INTEGRITY));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("feature", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(OPPO_FEATURE));
+    p_entry = proc_create_data("feature", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(OPLUS_FEATURE));
     if (!p_entry)
         goto error_init;
 
-    p_entry = proc_create_data("test", S_IRUGO, oppo_info, &project_info_fops, UINT2Ptr(PROJECT_TEST));
-    if (!p_entry)
-        goto error_init;
-
-    /*update single or double cards*/
-    //update_manifest(oppo_info);
-
-    p_entry = proc_create_data("prjName", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(PROJECT_VERSION));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("prjVersion", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(PROJECT_VERSION));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("pcbVersion", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(PCB_VERSION));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("oplusBootmode", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(OPPO_BOOTMODE));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("RFType", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(RF_INFO));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("modemType", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(MODEM_TYPE));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("operatorName", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(OPERATOR_NAME));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("secureType", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(SECURE_TYPE));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("secureStage", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(SECURE_STAGE));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("ocp", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(OCP_NUMBER));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("serialID", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(SERIAL_NUMBER));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("engVersion", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(ENG_VERSION));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("isConfidential", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(CONFIDENTIAL_STATUS));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("cdt", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(CDT_INTEGRITY));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("feature", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(OPPO_FEATURE));
-    if (!p_entry)
-        goto error_init;
-
-    p_entry = proc_create_data("test", S_IRUGO, oppo_info_temp, &project_info_fops, UINT2Ptr(PROJECT_TEST));
+    p_entry = proc_create_data("test", S_IRUGO, oplus_info, &project_info_fops, UINT2Ptr(PROJECT_TEST));
     if (!p_entry)
         goto error_init;
 
     /*update single or double cards*/
-    update_manifest(oppo_info, oppo_info_temp);
+    update_manifest(oplus_info);
 
     return 0;
 
 error_init:
-    remove_proc_entry("oppoVersion", NULL);
     remove_proc_entry("oplusVersion", NULL);
     return -ENOENT;
 }
 
-arch_initcall(oppo_project_init);
+arch_initcall(oplus_project_init);
 
-MODULE_DESCRIPTION("OPPO project version");
+MODULE_DESCRIPTION("OPLUS project version");
 MODULE_LICENSE("GPL v2");
-MODULE_AUTHOR("Joshua");
+MODULE_AUTHOR("DJ");

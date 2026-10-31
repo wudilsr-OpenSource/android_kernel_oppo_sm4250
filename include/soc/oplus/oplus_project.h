@@ -2,8 +2,8 @@
 /*
  * Copyright (C) 2018-2020 Oplus. All rights reserved.
  */
-#ifndef _OPPO_PROJECT_H_
-#define _OPPO_PROJECT_H_
+#ifndef _OPLUS_PROJECT_H_
+#define _OPLUS_PROJECT_H_
 #include "oplus_project_data_ocdt.h"
 #include "oplus_project_oldcdt.h"
 
@@ -45,12 +45,13 @@ void get_serialID(char *serialno);
 
 //cdt interface for Q or R
 unsigned int get_project(void);
+unsigned int get_prj(void);
 unsigned int is_project(int project);
-unsigned int get_Oppo_Boot_Mode(void);
+unsigned int get_Oplus_Boot_Mode(void);
 unsigned int get_PCB_Version(void);
 unsigned int get_audio(void);
 unsigned int get_dtsiNo(void);
-uint32_t get_oppo_feature(enum F_INDEX index);
+uint32_t get_oplus_feature(enum F_INDEX index);
 
 //cdt interface for P->R
 int32_t get_Modem_Version(void);
@@ -58,7 +59,6 @@ int32_t get_Operator_Version(void);
 
 //eng cdt data for P or Q or R
 bool is_confidential(void);
-bool oppo_daily_build(void);
-
+bool oplus_daily_build(void);
 
 #endif

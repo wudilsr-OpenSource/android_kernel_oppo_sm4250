@@ -77,16 +77,17 @@
 #define LITO 2
 #define TRINKET 3
 #define LAHAINA 4
-#define HOLI 5
 #define BENGAL 6
 #define LAGOON 7
+#define BLAIR 8
 
 #define PLATFORM_KONA "kona"
 #define PLATFORM_LITO "lito"
-#define PLATFORM_LAGOON "lagoon"
 #define PLATFORM_TRINKET "trinket"
 #define PLATFORM_LAHAINA "lahaina"
-#define PLATFORM_HOLI "holi"
+#define PLATFORM_YUPIK "yupik"
+#define PLATFORM_LAGOON "lagoon"
+#define PLATFORM_BLAIR "blair"
 #define PLATFORM_BENGAL "bengal"
 
 struct ws_desc_t {
@@ -101,7 +102,7 @@ struct wakeup_count_desc_t {
 	uint64_t module_all_count;
 	int module_mask;
 	int ws_number;
-	struct ws_desc_t ws_desc[4]; /*shouldn't less than 4*/
+	struct ws_desc_t ws_desc[7]; /*shouldn't less than 7*/
 };
 
 #if defined(CONFIG_OPPO_WAKELOCK_PROFILER) || defined(CONFIG_OPLUS_WAKELOCK_PROFILER)

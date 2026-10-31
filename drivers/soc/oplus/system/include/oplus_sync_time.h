@@ -1,5 +1,5 @@
 /***********************************************************
-** Copyright (C), 2008-2019, OPPO Mobile Comm Corp., Ltd.
+** Copyright (C), 2008-2019, Oplus Mobile Comm Corp., Ltd.
 **
 ** File: oplus_sync_time.h
 ** Description: Add for Sync App and Kernel time

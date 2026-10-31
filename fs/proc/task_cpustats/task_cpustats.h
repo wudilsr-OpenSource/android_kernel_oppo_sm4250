@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (C) 2020 Oplus. All rights reserved.
+ */
+
 #ifndef _OPPO_TASK_CPUSTATS_H
 #define _OPPO_TASK_CPUSTATS_H
 #include <linux/kernel_stat.h>

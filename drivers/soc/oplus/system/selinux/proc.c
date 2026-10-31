@@ -1,16 +1,7 @@
-/************************************************************
- * Copyright 2017 OPPO Mobile Comm Corp., Ltd.
- * All rights reserved.
- *
- * Description     : disable selinux denied log in MP version
- *
- *
- ** Version: 1
- ** Date created: 2016/01/06
- ** ------------------------------- Revision History: ---------------------------------------
- **        <author>      <data>           <desc>
- **       sijiaquan    2017/12/12    create this file
- ************************************************************/
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright (C) 2018-2020 Oplus. All rights reserved.
+ */
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>

@@ -43,7 +43,7 @@
 #include "ak4376.h"
 
 #ifdef OPLUS_ARCH_EXTENDS
-#include <soc/oppo/oppo_project.h>
+#include <soc/oplus/system/oplus_project.h>
 #endif /* OPLUS_ARCH_EXTENDS */
 
 #define AK4376_DRV_NAME "ak4376_codec"

@@ -17,6 +17,11 @@
 #include "sde_crtc.h"
 #include "sde_rm.h"
 
+#ifdef OPLUS_BUG_STABILITY
+#include "oplus_display_private_api.h"
+#include "oplus_aod.h"
+#endif /* OPLUS_BUG_STABILITY */
+
 #define BL_NODE_NAME_SIZE 32
 #define HDR10_PLUS_VSIF_TYPE_CODE      0x81
 
@@ -68,7 +73,7 @@ static const struct drm_prop_enum_list e_frame_trigger_mode[] = {
 
 #ifdef OPLUS_BUG_STABILITY
 extern int oplus_debug_max_brightness;
-static int interpolate(int x, int xa, int xb, int ya, int yb)
+static int sde_interpolate(int x, int xa, int xb, int ya, int yb)
 {
 	int bf, factor, plus;
 
@@ -127,11 +132,11 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 			else if (i == count)
 				bl_lvl = lut[count - 1].alpha;
 			else
-				bl_lvl = interpolate(brightness, lut[i-1].brightness,
+				bl_lvl = sde_interpolate(brightness, lut[i-1].brightness,
 						lut[i].brightness, lut[i-1].alpha,
 						lut[i].alpha);
 		} else if (brightness > display->panel->bl_config.brightness_normal_max_level) {
-			bl_lvl = interpolate(brightness,
+			bl_lvl = sde_interpolate(brightness,
 					display->panel->bl_config.brightness_normal_max_level,
 					display->panel->bl_config.brightness_max_level,
 					display->panel->bl_config.bl_normal_max_level,
@@ -762,7 +767,6 @@ extern int oplus_dimlayer_bl_delay_after;
 extern int oplus_dimlayer_bl_enable_v2;
 extern int oplus_dimlayer_bl_enable_v3;
 int oplus_dimlayer_bl_enable_v2_real = 0;
-extern int oplus_dimlayer_bl_enable_v3_real;
 extern int oplus_datadimming_vblank_count;
 extern atomic_t oplus_datadimming_vblank_ref;
 int oplus_datadimming_v3_skip_frame = 2;
@@ -816,9 +820,7 @@ extern int oplus_fod_off_vblank;
 extern int oplus_panel_update_backlight_unlock(struct dsi_panel *panel);
 extern int oplus_panel_process_dimming_v2(struct dsi_panel *panel, int bl_lvl, bool force_disable);
 extern void oplus_panel_process_dimming_v2_post(struct dsi_panel *panel, bool force_disable);
-extern int oplus_update_aod_light_mode_unlock(struct dsi_panel *panel);
 bool oplus_skip_datadimming_sync = false;
-extern int oplus_display_mode;
 extern ktime_t oplus_backlight_time;
 static struct task_struct *hbm_notify_task;
 static wait_queue_head_t hbm_notify_task_wq;

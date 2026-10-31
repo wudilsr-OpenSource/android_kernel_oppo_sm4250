@@ -4,8 +4,8 @@
  */
 #ifndef _OPPO_PROJECT_H_
 #define _OPPO_PROJECT_H_
-#include "oppo_project_data_ocdt.h"
-#include "oppo_project_oldcdt.h"
+#include "oplus_project_data_ocdt.h"
+#include "oplus_project_oldcdt.h"
 
 #define ALIGN4(s) ((sizeof(s) + 3)&(~0x3))
 
@@ -59,6 +59,7 @@ int32_t get_Operator_Version(void);
 //eng cdt data for P or Q or R
 bool is_confidential(void);
 bool oppo_daily_build(void);
+bool oplus_daily_build(void);
 
 
 #endif

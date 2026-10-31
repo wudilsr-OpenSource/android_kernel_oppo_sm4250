@@ -519,7 +519,7 @@ static struct kmem_cache *create_kmalloc_debug_caches(size_t size,
 			ARCH_KMALLOC_MINALIGN, flags, 0,
 			kmalloc_debug_info[index].size, NULL);
 #endif
-	if (!s)
+	if (kmalloc_type == KMALLOC_RECLAIM)
 		kfree(name);
 
 	return s;
@@ -1066,6 +1066,9 @@ static inline void init_kmalloc_debug_caches(unsigned long flags)
 
 	for (type = KMALLOC_NORMAL; type <= KMALLOC_RECLAIM; type++) {
 		for (i = KMALLOC_SHIFT_LOW; i <= KMALLOC_SHIFT_HIGH; i++) {
+			if (atomic64_read(&kmalloc_debug_caches[type][i]))
+				continue;
+
 			s = create_kmalloc_debug_caches(kmalloc_debug_info[i].size,
 					flags, type);
 
@@ -1100,7 +1103,7 @@ static ssize_t memleak_detect_thread_read(struct file *file,
 		count = 15;
 
 	len = scnprintf(kbuf, count, "%d\n", memleak_detect_task ? 1 : 0);
-	kbuf[len++] = '\0';
+	kbuf[len] = '\0';
 
 	if (len > *off)
 		len -= *off;
@@ -1184,7 +1187,7 @@ static int __init memleak_detect_init(void)
         kmalloc_debug_watermark_init();
 #endif
 
-        memleak_detect_task = kthread_create(memleak_detect_thread, NULL, "memleak_detect");
+	memleak_detect_task = kthread_create(memleak_detect_thread, NULL, "memleak_detect");
 	if (IS_ERR(memleak_detect_task)) {
 		pr_warn("[kmalloc_debug][vmalloc_debug] memleak_detect_init failed.\n");
 		memleak_detect_task = NULL;
