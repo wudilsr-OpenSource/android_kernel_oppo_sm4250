@@ -1413,6 +1413,13 @@ export INSTALL_HDR_PATH = $(objtree)/usr
 # If we do an all arch process set dst to include/arch-$(SRCARCH)
 hdr-dst = $(if $(KBUILD_HEADERS), dst=include/arch-$(SRCARCH), dst=include)
 
+# techpack also holds non-uapi headers, only <dir>/include/uapi is exportable.
+# Directories without any header are skipped, headersinst would report them as
+# an empty install. dst is namespaced by the techpack name so that the headers
+# do not overlap with include/uapi, whose install drops unknown files.
+techpack-dirs := $(shell cd $(srctree) && for d in techpack/*/include/uapi; do \
+	[ -n "$$(find $$d -name '*.h' -print -quit 2>/dev/null)" ] && echo $${d%/include/uapi}; done)
+
 PHONY += archheaders
 archheaders:
 
@@ -1433,7 +1440,9 @@ headers_install: __headers
 	  $(error Headers not exportable for the $(SRCARCH) architecture))
 	$(Q)$(MAKE) $(hdr-inst)=include/uapi dst=include
 	$(Q)$(MAKE) $(hdr-inst)=arch/$(SRCARCH)/include/uapi $(hdr-dst)
-	$(Q)$(MAKE) $(hdr-inst)=techpack
+	$(Q)for d in $(techpack-dirs); do \
+		$(MAKE) $(hdr-inst)=$$d/include/uapi dst=include/$${d#techpack/}; \
+	done
 
 PHONY += headers_check_all
 headers_check_all: headers_install_all
@@ -1443,7 +1452,9 @@ PHONY += headers_check
 headers_check: headers_install
 	$(Q)$(MAKE) $(hdr-inst)=include/uapi dst=include HDRCHECK=1
 	$(Q)$(MAKE) $(hdr-inst)=arch/$(SRCARCH)/include/uapi $(hdr-dst) HDRCHECK=1
-	$(Q)$(MAKE) $(hdr-inst)=techpack HDRCHECK=1
+	$(Q)for d in $(techpack-dirs); do \
+		$(MAKE) $(hdr-inst)=$$d/include/uapi dst=include/$${d#techpack/} HDRCHECK=1; \
+	done
 
 # ---------------------------------------------------------------------------
 # Kernel selftest
