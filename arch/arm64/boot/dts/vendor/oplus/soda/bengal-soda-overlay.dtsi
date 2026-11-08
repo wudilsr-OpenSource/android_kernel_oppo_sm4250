@@ -848,11 +848,11 @@ delete note  and status = "disabled" to "ok"  add here also, other will meet can
 	//#ifdef VENDOR_EDIT
 	rf_cable0_active: rf_cable0_active {
 		mux {
-			pins = "gpio106";
+			pins = "gpio39";
 			function = "gpio";
 		};
 		config {
-			pins = "gpio106";
+			pins = "gpio39";
 			drive-strength = <2>;
 			input-enable;
 			bias-pull-up;
