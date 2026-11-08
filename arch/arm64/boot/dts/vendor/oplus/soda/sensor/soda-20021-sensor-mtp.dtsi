@@ -87,8 +87,8 @@
 					is_ps_initialzed = <0>;
 					low_step = <300>;
 					high_step = <400>;
-					low_limit = <650>;
-					high_limit = <1050>;
+					low_limit = <500>;
+					high_limit = <800>;
 					dirty_low_step = <300>;
 					dirty_high_step = <400>;
 					ps_dirty_limit = <1800>;
@@ -126,8 +126,8 @@
 					is_ps_initialzed = <0>;
 					low_step = <300>;
 					high_step = <400>;
-					low_limit = <650>;
-					high_limit = <1050>;
+					low_limit = <500>;
+					high_limit = <800>;
 					dirty_low_step = <300>;
 					dirty_high_step = <400>;
 					ps_dirty_limit = <1800>;
