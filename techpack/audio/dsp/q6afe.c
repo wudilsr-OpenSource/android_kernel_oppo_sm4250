@@ -5560,9 +5560,13 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 				ret = q6afe_load_avcs_modules(2, port_id,
 					ENCODER_CASE, codec_format);
 				if (ret < 0) {
-					pr_err("%s:encoder load for port 0x%x failed %d\n",
+					/*
+					 * The encoder may be built into the ADSP even when the
+					 * ACDB registry lists no AVS module for it, so keep the
+					 * port alive and let the config below decide.
+					 */
+					pr_warn("%s:encoder load for port 0x%x failed %d\n",
 						__func__, port_id, ret);
-					goto fail_cmd;
 				}
 			}
 
@@ -5596,9 +5600,12 @@ static int __afe_port_start(u16 port_id, union afe_port_config *afe_config,
 					ret = q6afe_load_avcs_modules(2, port_id,
 						DECODER_CASE, codec_format);
 				if (ret < 0) {
-					pr_err("%s:decoder load for port 0x%x failed %d\n",
+					/*
+					 * Same reasoning as the encoder path: the decoder may
+					 * be built into the ADSP as well.
+					 */
+					pr_warn("%s:decoder load for port 0x%x failed %d\n",
 						__func__, port_id, ret);
-					goto fail_cmd;
 				}
 			}
 			ret = q6afe_send_dec_config(port_id, *afe_config,
