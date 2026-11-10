@@ -1752,13 +1752,7 @@ static int oplus_chg_chg_batt_aging_check(struct oplus_chg_chip *chip)
 
 			if (last_ts.tv_sec == 0) {
 				ret = oplus_chg_read_filedata(&last_ts);
-				if (ret < 0) {
-					ret = oplus_chg_write_filedata(&ts);
-					if (!ret) {
-						last_ts.tv_sec = ts.tv_sec;
-						count = 0;
-					}
-				}
+				count = 0;
 				return 0;
 			}
 
