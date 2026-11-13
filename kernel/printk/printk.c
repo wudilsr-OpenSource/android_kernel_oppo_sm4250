@@ -58,6 +58,22 @@
 #include "braille.h"
 #include "internal.h"
 
+/* Expose the OPLUS LK 'simcardnum.doublesim=' bootarg as a sysfs knob,
+ * mirroring the oneplus/sm4250 printk interface so init scripts can pick
+ * the right multisim config (dsds/ssss) per board variant. */
+bool dual_sim = true;
+EXPORT_SYMBOL(dual_sim);
+
+module_param_named(dual_sim, dual_sim, bool, 0444);
+static int __init printk_dual_sim(char *str)
+{
+	if (!strcmp(str, "0"))
+		dual_sim = false;
+
+	return 0;
+}
+__setup("simcardnum.doublesim=", printk_dual_sim);
+
 #ifdef OPLUS_FEATURE_POWERINFO_FTM
 /* Add for ftm uart control via cmdline */
 enum{
